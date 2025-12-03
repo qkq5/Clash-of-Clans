@@ -51,7 +51,6 @@ bool HelloWorld::init()
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
     /////////////////////////////
     // 2. add a menu item with "X" image, which is clicked to quit the program
     //    you may modify it.
@@ -82,7 +81,27 @@ bool HelloWorld::init()
 
     /////////////////////////////
     // 3. add your codes below...
-
+    // 1. 获取屏幕尺寸，用于居中
+    
+    
+    // 2. 创建背景精灵 (Sprite)
+    // 假设你在项目的 Resources 文件夹中放置了一张图片，名为 "home_bg.png"
+    auto background = Sprite::create("home_bg.png"); 
+    
+    // 3. 检查是否加载成功
+    if (background)
+    {
+        // 4. 设置背景图居中
+        background->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
+        
+        // 5. 将背景图添加到场景中 (Z = 0 表示在最底层)
+        this->addChild(background, 0);
+    }
+    else
+    {
+        // 如果背景图文件不存在，打印错误信息
+        problemLoading("home_bg.png");
+    }
     // add a label shows "Hello World"
     // create and initialize a label
 
