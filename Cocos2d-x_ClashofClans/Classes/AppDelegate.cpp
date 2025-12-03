@@ -24,7 +24,6 @@
 
 #include "AppDelegate.h"
 #include "HelloWorldScene.h"
-#include "MainMenuScene.h"
 // #define USE_AUDIO_ENGINE 1
 // #define USE_SIMPLE_AUDIO_ENGINE 1
 
@@ -118,7 +117,7 @@ bool AppDelegate::applicationDidFinishLaunching() {
     register_all_packages();
 
     // 将启动场景改为 MainMenuScene
-    auto scene = MainMenuScene::createScene();
+    auto scene = HelloWorld::createScene();
 
     // 让导演运行这个场景
     director->runWithScene(scene);
