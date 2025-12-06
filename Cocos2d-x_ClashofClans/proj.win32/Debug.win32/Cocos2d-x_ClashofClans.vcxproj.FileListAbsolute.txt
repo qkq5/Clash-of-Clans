@@ -1,3 +1,4 @@
 C:\Users\Administrator\Cocos2d-x_ClashofClans\proj.win32\Debug.win32\Cocos2d-x_ClashofClans.exe
 C:\Users\Administrator\Desktop\1\Clash-of-Clans\Cocos2d-x_ClashofClans\proj.win32\Debug.win32\Cocos2d-x_ClashofClans.exe
 E:\game\Clash-of-Clans\Cocos2d-x_ClashofClans\proj.win32\Debug.win32\Cocos2d-x_ClashofClans.exe
+C:\Users\Administrator\Desktop\2\Clash-of-Clans\Cocos2d-x_ClashofClans\proj.win32\Debug.win32\Cocos2d-x_ClashofClans.exe

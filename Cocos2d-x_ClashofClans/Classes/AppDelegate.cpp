@@ -23,8 +23,9 @@
  ****************************************************************************/
 
 #include "AppDelegate.h"
-#include "HelloWorldScene.h"
-// #define USE_AUDIO_ENGINE 1
+#include "GameScene.h"
+
+#define USE_AUDIO_ENGINE 1
 // #define USE_SIMPLE_AUDIO_ENGINE 1
 
 #if USE_AUDIO_ENGINE && USE_SIMPLE_AUDIO_ENGINE
@@ -82,9 +83,9 @@ bool AppDelegate::applicationDidFinishLaunching() {
     auto glview = director->getOpenGLView();
     if(!glview) {
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32) || (CC_TARGET_PLATFORM == CC_PLATFORM_MAC) || (CC_TARGET_PLATFORM == CC_PLATFORM_LINUX)
-        glview = GLViewImpl::createWithRect("Cocos2d-x_ClashofClans", cocos2d::Rect(0, 0, designResolutionSize.width, designResolutionSize.height));
+        glview = GLViewImpl::createWithRect("clashofclans2", cocos2d::Rect(0, 0, designResolutionSize.width, designResolutionSize.height));
 #else
-        glview = GLViewImpl::create("Cocos2d-x_ClashofClans");
+        glview = GLViewImpl::create("clashofclans2");
 #endif
         director->setOpenGLView(glview);
     }
@@ -116,10 +117,10 @@ bool AppDelegate::applicationDidFinishLaunching() {
 
     register_all_packages();
 
-    // 将启动场景改为 MainMenuScene
-    auto scene = HelloWorld::createScene();
+    // create a scene. it's an autorelease object
+    auto scene = GameScene::createScene();
 
-    // 让导演运行这个场景
+    // run
     director->runWithScene(scene);
 
     return true;
