@@ -93,7 +93,11 @@ void VillageScene::setupUI() {
     this->addChild(uiLayer, 100); // Top layer
 
     // 1. Attack Mode Button (Top Left)
-    auto attackItem = MenuItemImage::create("attack_mode.png", "attack_mode.png", CC_CALLBACK_1(VillageScene::onAttackModeCallback, this));
+    MenuItem* attackItem = MenuItemImage::create("attack_mode.png", "attack_mode.png", CC_CALLBACK_1(VillageScene::onAttackModeCallback, this));
+    if (attackItem == nullptr || attackItem->getContentSize().width == 0) {
+        auto label = Label::createWithSystemFont("Attack", "Arial", 20);
+        attackItem = MenuItemLabel::create(label, CC_CALLBACK_1(VillageScene::onAttackModeCallback, this));
+    }
     auto attackMenu = Menu::create(attackItem, nullptr);
     attackMenu->setPosition(Vec2(origin.x + 50, origin.y + visibleSize.height - 50));
     uiLayer->addChild(attackMenu);
@@ -106,6 +110,7 @@ void VillageScene::setupUI() {
 
     // Gold
     auto coinIcon = Sprite::create("coin.png");
+    if (!coinIcon) coinIcon = Sprite::create(); // Fallback empty sprite
     coinIcon->setPosition(Vec2(startX - 200, startY));
     uiLayer->addChild(coinIcon);
     _goldLabel = Label::createWithSystemFont(std::to_string(_gold), "Arial", 16);
@@ -114,6 +119,7 @@ void VillageScene::setupUI() {
 
     // Elixir
     auto elixirIcon = Sprite::create("elixir.png");
+    if (!elixirIcon) elixirIcon = Sprite::create();
     elixirIcon->setPosition(Vec2(startX - 100, startY));
     uiLayer->addChild(elixirIcon);
     _elixirLabel = Label::createWithSystemFont(std::to_string(_elixir), "Arial", 16);
@@ -122,6 +128,7 @@ void VillageScene::setupUI() {
 
     // Population
     auto peopleIcon = Sprite::create("people.png");
+    if (!peopleIcon) peopleIcon = Sprite::create();
     peopleIcon->setPosition(Vec2(startX, startY));
     uiLayer->addChild(peopleIcon);
     _populationLabel = Label::createWithSystemFont(std::to_string(_population), "Arial", 16);
@@ -129,7 +136,11 @@ void VillageScene::setupUI() {
     uiLayer->addChild(_populationLabel);
 
     // 3. Build Button (Bottom Right)
-    auto buildItem = MenuItemImage::create("build.png", "build.png", CC_CALLBACK_1(VillageScene::onBuildModeCallback, this));
+    MenuItem* buildItem = MenuItemImage::create("build.png", "build.png", CC_CALLBACK_1(VillageScene::onBuildModeCallback, this));
+    if (buildItem == nullptr || buildItem->getContentSize().width == 0) {
+        auto label = Label::createWithSystemFont("Build", "Arial", 20);
+        buildItem = MenuItemLabel::create(label, CC_CALLBACK_1(VillageScene::onBuildModeCallback, this));
+    }
     auto buildMenu = Menu::create(buildItem, nullptr);
     buildMenu->setPosition(Vec2(origin.x + visibleSize.width - 50, origin.y + 50));
     uiLayer->addChild(buildMenu);
