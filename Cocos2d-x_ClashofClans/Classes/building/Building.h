@@ -32,6 +32,12 @@ public:
     CC_SYNTHESIZE(BuildingType, _type, Type);
     CC_SYNTHESIZE(cocos2d::Vec2, _gridPosition, GridPosition); // Position in grid coordinates (0-49)
 
+    // Combat attributes (for Defenses)
+    CC_SYNTHESIZE(int, _attackDamage, AttackDamage);
+    CC_SYNTHESIZE(float, _attackRange, AttackRange);
+    CC_SYNTHESIZE(float, _attackInterval, AttackInterval);
+    CC_SYNTHESIZE(float, _attackTimer, AttackTimer);
+
     // Abstract methods to be implemented by subclasses
     virtual void upgrade() = 0;
     virtual int getUpgradeCost() const = 0;
@@ -40,6 +46,8 @@ public:
 
     // Common methods
     virtual void showInfo() = 0; // To be implemented for UI display logic
+    
+    virtual void takeDamage(int damage);
     
     // Factory method pattern could be useful here, but for now we'll use specific create methods in subclasses
 };
