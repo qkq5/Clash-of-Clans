@@ -22,6 +22,11 @@ bool ArcherTower::init() {
     _level = 1;
     _maxHP = 200;
     _currentHP = _maxHP;
+    
+    // Combat
+    _attackRange = 6.0f * 32.0f; // 6 tiles
+    _attackInterval = 1.0f;
+    _attackDamage = 45; // Level 1
 
     updateTexture();
     return true;
@@ -39,8 +44,10 @@ void ArcherTower::upgrade() {
     
     if (_level == 2) {
         _maxHP = 250;
+        _attackDamage = 90;
     } else if (_level == 3) {
         _maxHP = 300;
+        _attackDamage = 130;
     }
     
     _currentHP = _maxHP; // Heal on upgrade? Usually yes in simple implementations
@@ -59,20 +66,6 @@ bool ArcherTower::canUpgrade() const {
 
 void ArcherTower::showInfo() {
     // This will be handled by VillageScene, calling getters
-}
-
-int ArcherTower::getAttackDamage() const {
-    if (_level == 1) return 45;
-    if (_level == 2) return 90;
-    return 130;
-}
-
-float ArcherTower::getAttackRange() const {
-    return 6.0f; // Grid units
-}
-
-float ArcherTower::getAttackInterval() const {
-    return 1.0f; // Seconds
 }
 
 } // namespace building

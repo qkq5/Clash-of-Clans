@@ -16,11 +16,6 @@ public:
     virtual bool canUpgrade() const override;
     virtual void showInfo() override;
     
-    // Combat attributes
-    int getAttackDamage() const;
-    float getAttackRange() const;
-    float getAttackInterval() const;
-    
     static int getBuildCost() { return 300; }
     static std::string getBuildCurrencyIcon() { return "coin.png"; }
 

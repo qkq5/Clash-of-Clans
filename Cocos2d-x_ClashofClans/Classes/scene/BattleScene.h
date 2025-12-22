@@ -27,7 +27,11 @@ private:
     cocos2d::Label* _archerLabel;
     cocos2d::Label* _bomberLabel;
     cocos2d::Label* _giantLabel;
+    cocos2d::Label* _totalTroopLabel;
+    cocos2d::Label* _debugLabel;
     
+    cocos2d::Node* _troopSelectionNode;
+
     soldier::SoldierType _selectedTroop;
     bool _isDeployMode;
     
@@ -40,9 +44,12 @@ private:
     
     void setupLevel(int level);
     void setupUI();
+    void updateTotalTroopsUI();
     
     // Input
     bool onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event);
+    void onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event);
+    void onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event);
     
     // Combat
     void spawnTroop(cocos2d::Vec2 position);
