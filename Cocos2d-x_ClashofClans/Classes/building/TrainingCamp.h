@@ -1,13 +1,14 @@
-#ifndef __GOLD_STORAGE_H__
-#define __GOLD_STORAGE_H__
+#ifndef __TRAINING_CAMP_H__
+#define __TRAINING_CAMP_H__
 
 #include "Building.h"
+#include <vector>
 
 namespace building {
 
-class GoldStorage : public Building {
+class TrainingCamp : public Building {
 public:
-    static GoldStorage* create();
+    static TrainingCamp* create();
     virtual bool init() override;
 
     virtual void upgrade() override;
@@ -16,7 +17,7 @@ public:
     virtual bool canUpgrade() const override;
     virtual void showInfo() override;
     
-    int getCapacity() const;
+    std::vector<std::string> getUnlockableSoldiers() const;
     
     static int getBuildCost() { return 300; }
     static std::string getBuildCurrencyIcon() { return "elixir.png"; }
@@ -27,4 +28,4 @@ private:
 
 } // namespace building
 
-#endif // __GOLD_STORAGE_H__
+#endif // __TRAINING_CAMP_H__

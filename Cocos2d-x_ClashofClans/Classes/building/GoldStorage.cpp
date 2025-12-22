@@ -64,4 +64,10 @@ void GoldStorage::showInfo() {
     CCLOG("Show Info for Gold Storage Level %d", _level);
 }
 
+int GoldStorage::getCapacity() const {
+    if (_level == 1) return 600;
+    if (_level == 2) return 1200;
+    return 1800;
+}
+
 } // namespace building

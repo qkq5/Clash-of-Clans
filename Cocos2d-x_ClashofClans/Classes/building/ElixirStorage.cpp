@@ -64,4 +64,10 @@ void ElixirStorage::showInfo() {
     CCLOG("Show Info for Elixir Storage Level %d", _level);
 }
 
+int ElixirStorage::getCapacity() const {
+    if (_level == 1) return 600;
+    if (_level == 2) return 1200;
+    return 1800;
+}
+
 } // namespace building

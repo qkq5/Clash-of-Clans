@@ -64,4 +64,10 @@ void ElixirCollector::showInfo() {
     CCLOG("Show Info for Elixir Collector Level %d", _level);
 }
 
+int ElixirCollector::getProductionRate() const {
+    if (_level == 1) return 6;
+    if (_level == 2) return 12;
+    return 20;
+}
+
 } // namespace building

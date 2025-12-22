@@ -66,4 +66,10 @@ void GoldMine::showInfo() {
     CCLOG("Show Info for Gold Mine Level %d", _level);
 }
 
+int GoldMine::getProductionRate() const {
+    if (_level == 1) return 6;
+    if (_level == 2) return 12;
+    return 20;
+}
+
 } // namespace building

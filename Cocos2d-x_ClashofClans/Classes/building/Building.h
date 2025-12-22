@@ -41,6 +41,8 @@ public:
     // Common methods
     virtual void showInfo() = 0; // To be implemented for UI display logic
     
+    virtual void takeDamage(int damage);
+    
     // Factory method pattern could be useful here, but for now we'll use specific create methods in subclasses
 };
 

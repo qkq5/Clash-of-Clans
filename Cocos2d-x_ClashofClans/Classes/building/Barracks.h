@@ -1,13 +1,13 @@
-#ifndef __GOLD_STORAGE_H__
-#define __GOLD_STORAGE_H__
+#ifndef __BARRACKS_H__
+#define __BARRACKS_H__
 
 #include "Building.h"
 
 namespace building {
 
-class GoldStorage : public Building {
+class Barracks : public Building {
 public:
-    static GoldStorage* create();
+    static Barracks* create();
     virtual bool init() override;
 
     virtual void upgrade() override;
@@ -27,4 +27,4 @@ private:
 
 } // namespace building
 
-#endif // __GOLD_STORAGE_H__
+#endif // __BARRACKS_H__

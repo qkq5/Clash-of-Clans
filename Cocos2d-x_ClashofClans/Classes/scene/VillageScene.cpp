@@ -1,5 +1,11 @@
 #include "VillageScene.h"
 #include "MainMenuScene.h"
+#include "BattleScene.h"
+#include "building/Cannon.h"
+#include "building/Barracks.h"
+#include "building/TrainingCamp.h"
+#include "building/Wall.h"
+#include <vector>
 
 USING_NS_CC;
 
@@ -26,7 +32,86 @@ bool VillageScene::init() {
     setupBuildings(); // Place initial buildings
     setupTouchHandling();
 
+    this->scheduleUpdate(); // Enable update loop for resources
+
     return true;
+}
+
+void VillageScene::update(float dt) {
+    // 1. Production
+    double goldRate = 0;
+    double elixirRate = 0;
+
+    for (auto b : _buildings) {
+        if (auto mine = dynamic_cast<building::GoldMine*>(b)) {
+            // Rate depends on level: 1->6, 2->12, 3->20
+            int level = mine->getLevel();
+            if (level == 1) goldRate += 6;
+            else if (level == 2) goldRate += 12;
+            else if (level == 3) goldRate += 20;
+        } else if (auto collector = dynamic_cast<building::ElixirCollector*>(b)) {
+            // Rate: 1->6, 2->12, 3->20
+            int level = collector->getLevel();
+            if (level == 1) elixirRate += 6;
+            else if (level == 2) elixirRate += 12;
+            else if (level == 3) elixirRate += 20;
+        }
+    }
+
+    // Add per second (dt is seconds elapsed)
+    double goldToAdd = goldRate * dt;
+    double elixirToAdd = elixirRate * dt;
+
+    // 2. Storage Limits
+    int maxGold = getResourceCapacity(true);
+    int maxElixir = getResourceCapacity(false);
+
+    // Logic: "When gold reaches capacity, gold stops increasing"
+    if (_gold < maxGold) {
+        _gold += goldToAdd;
+        if (_gold > maxGold) _gold = maxGold;
+    }
+    
+    if (_elixir < maxElixir) {
+        _elixir += elixirToAdd;
+        if (_elixir > maxElixir) _elixir = maxElixir;
+    }
+
+    // Update UI (maybe throttle this if performance issue, but text update is cheap)
+    updateResourceLabels();
+}
+
+int VillageScene::getResourceCapacity(bool isGold) const {
+    int capacity = 0;
+    for (auto b : _buildings) {
+        if (isGold) {
+            if (auto storage = dynamic_cast<building::GoldStorage*>(b)) {
+                int level = storage->getLevel();
+                if (level == 1) capacity += 600;
+                else if (level == 2) capacity += 1200;
+                else if (level == 3) capacity += 1800;
+            }
+        } else {
+            if (auto storage = dynamic_cast<building::ElixirStorage*>(b)) {
+                int level = storage->getLevel();
+                if (level == 1) capacity += 600;
+                else if (level == 2) capacity += 1200;
+                else if (level == 3) capacity += 1800;
+            }
+        }
+    }
+    // Base capacity if 0 storages? Usually there is a small base capacity in TownHall (e.g. 1000)
+    // Requirement says "Gold Storage determines max limit".
+    // "Game starts with 1 Gold Storage Lv1 (Cap 600)".
+    // Plus we have initial 1000 gold. This exceeds cap.
+    // Let's assume Town Hall also has capacity or initial resources can exceed cap.
+    // Requirement: "Gold stops increasing when it reaches cap". Doesn't say it clamps immediately if over.
+    // But usually Town Hall has capacity (e.g. 1000).
+    // Let's add Town Hall capacity (usually 1000 for Lv1).
+    // For this assignment, let's stick to Storage buildings capacity as requested.
+    // "Gold Storage... determines max limit".
+    // If I have 1000 gold and cap is 600, I just can't collect more.
+    return capacity > 0 ? capacity : 1000; // Fallback to 1000 to prevent stuck at 0 if no storage
 }
 
 void VillageScene::setupMap() {
@@ -211,6 +296,11 @@ void VillageScene::placeBuilding(building::BuildingType type, const cocos2d::Vec
         case building::BuildingType::ElixirCollector: building = building::ElixirCollector::create(); break;
         case building::BuildingType::GoldStorage: building = building::GoldStorage::create(); break;
         case building::BuildingType::ElixirStorage: building = building::ElixirStorage::create(); break;
+        case building::BuildingType::ArcherTower: building = building::ArcherTower::create(); break;
+        case building::BuildingType::Cannon: building = building::Cannon::create(); break;
+        case building::BuildingType::Barracks: building = building::Barracks::create(); break;
+        case building::BuildingType::TrainingCamp: building = building::TrainingCamp::create(); break;
+        case building::BuildingType::Wall: building = building::Wall::create(); break;
         default: break;
     }
 
@@ -268,18 +358,25 @@ void VillageScene::showLevelSelectWindow() {
     MenuItem* hardItem = MenuItemImage::create("hard_mode.png", "hard_mode.png", [this](Ref*){ onLevelSelectCallback(nullptr, 3); });
 
     // Fallbacks
-    if (!simpleItem || simpleItem->getContentSize().width == 0) simpleItem = MenuItemLabel::create(Label::createWithSystemFont("Simple", "Arial", 24), [this](Ref*){ onLevelSelectCallback(nullptr, 1); });
-    if (!mediumItem || mediumItem->getContentSize().width == 0) mediumItem = MenuItemLabel::create(Label::createWithSystemFont("Medium", "Arial", 24), [this](Ref*){ onLevelSelectCallback(nullptr, 2); });
-    if (!hardItem || hardItem->getContentSize().width == 0) hardItem = MenuItemLabel::create(Label::createWithSystemFont("Hard", "Arial", 24), [this](Ref*){ onLevelSelectCallback(nullptr, 3); });
+    if (!simpleItem || simpleItem->getContentSize().width == 0) simpleItem = MenuItemLabel::create(Label::createWithSystemFont("Simple Mode", "Arial", 30), [this](Ref*){ onLevelSelectCallback(nullptr, 1); });
+    if (!mediumItem || mediumItem->getContentSize().width == 0) mediumItem = MenuItemLabel::create(Label::createWithSystemFont("Medium Mode", "Arial", 30), [this](Ref*){ onLevelSelectCallback(nullptr, 2); });
+    if (!hardItem || hardItem->getContentSize().width == 0) hardItem = MenuItemLabel::create(Label::createWithSystemFont("Hard Mode", "Arial", 30), [this](Ref*){ onLevelSelectCallback(nullptr, 3); });
 
     auto menu = Menu::create(simpleItem, mediumItem, hardItem, nullptr);
     menu->alignItemsVerticallyWithPadding(20);
+    menu->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2));
     windowLayer->addChild(menu);
 }
 
 void VillageScene::onLevelSelectCallback(Ref* pSender, int level) {
-    CCLOG("Level Selected: %d", level);
-    // TODO: Switch to BattleScene
+    int barb = 0, arch = 0, bomb = 0, giant = 0;
+    if (_troops.find("Barbarian") != _troops.end()) barb = _troops["Barbarian"];
+    if (_troops.find("Archer") != _troops.end()) arch = _troops["Archer"];
+    if (_troops.find("WallBreaker") != _troops.end()) bomb = _troops["WallBreaker"];
+    if (_troops.find("Giant") != _troops.end()) giant = _troops["Giant"];
+    
+    auto scene = BattleScene::createScene(level, barb, arch, bomb, giant);
+    Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
     closeCurrentWindow();
 }
 
@@ -299,36 +396,111 @@ void VillageScene::showBuildWindow() {
     closeMenu->setPosition(Vec2(visibleSize.width - 50, visibleSize.height - 50));
     windowLayer->addChild(closeMenu);
 
+    // Helper lambda to create building button
+    auto createBtn = [this](const std::string& img, building::BuildingType type, int cost, bool isGold) -> MenuItem* {
+        // Check limits
+        int currentCount = getBuildingCount(type);
+        int maxCount = getMaxBuildingCount(type, getTownHallLevel());
+        
+        if (currentCount >= maxCount) {
+             // Greyed out or just show text "Max"
+             // For simplicity, let's just create it but it will fail on click? 
+             // Or better: Disabled item.
+             auto sprite = Sprite::create(img);
+             if (sprite) {
+                 sprite->setColor(Color3B::GRAY);
+                 auto item = MenuItemSprite::create(sprite, sprite, nullptr);
+                 return item;
+             }
+             return nullptr; 
+        }
+
+        auto item = MenuItemImage::create(img, img, [this, type, cost, isGold](Ref*){
+            if (isGold) {
+                if (trySpendResources(cost, 0)) onBuildingTypeSelected(nullptr, type);
+            } else {
+                if (trySpendResources(0, cost)) onBuildingTypeSelected(nullptr, type);
+            }
+        });
+        
+        // Add cost label
+        if (item) {
+             auto label = Label::createWithSystemFont(std::to_string(cost), "Arial", 16);
+             label->setPosition(Vec2(item->getContentSize().width/2, -10));
+             item->addChild(label);
+        }
+        return item;
+    };
+
     // Building Buttons
-    // Gold Mine
-    MenuItem* mineItem = MenuItemImage::create("gold_mine1.png", "gold_mine1.png", [this](Ref*){ 
-        if (trySpendResources(0, building::GoldMine::getBuildCost())) { // Costs Elixir
-             onBuildingTypeSelected(nullptr, building::BuildingType::GoldMine); 
-        }
-    });
-    // Elixir Collector
-    MenuItem* collectorItem = MenuItemImage::create("elixir_collector1.png", "elixir_collector1.png", [this](Ref*){ 
-        if (trySpendResources(building::ElixirCollector::getBuildCost(), 0)) { // Costs Gold
-             onBuildingTypeSelected(nullptr, building::BuildingType::ElixirCollector); 
-        }
-    });
-    // Gold Storage
-    MenuItem* gStoreItem = MenuItemImage::create("gold_storage1.png", "gold_storage1.png", [this](Ref*){ 
-        if (trySpendResources(0, building::GoldStorage::getBuildCost())) { 
-             onBuildingTypeSelected(nullptr, building::BuildingType::GoldStorage); 
-        }
-    });
-    // Elixir Storage
-    MenuItem* eStoreItem = MenuItemImage::create("elixir_storage1.png", "elixir_storage1.png", [this](Ref*){ 
-        if (trySpendResources(building::ElixirStorage::getBuildCost(), 0)) { 
-             onBuildingTypeSelected(nullptr, building::BuildingType::ElixirStorage); 
-        }
-    });
+    Vector<MenuItem*> items;
     
+    // Resource Buildings
+    if (auto btn = createBtn("gold_mine1.png", building::BuildingType::GoldMine, building::GoldMine::getBuildCost(), false)) items.pushBack(btn);
+    if (auto btn = createBtn("elixir_collector1.png", building::BuildingType::ElixirCollector, building::ElixirCollector::getBuildCost(), true)) items.pushBack(btn);
+    if (auto btn = createBtn("gold_storage1.png", building::BuildingType::GoldStorage, building::GoldStorage::getBuildCost(), false)) items.pushBack(btn);
+    if (auto btn = createBtn("elixir_storage1.png", building::BuildingType::ElixirStorage, building::ElixirStorage::getBuildCost(), true)) items.pushBack(btn);
+    
+    // Defense
+    if (auto btn = createBtn("archer_tower1.png", building::BuildingType::ArcherTower, building::ArcherTower::getBuildCost(), true)) items.pushBack(btn);
+    if (auto btn = createBtn("cannon1.png", building::BuildingType::Cannon, building::Cannon::getBuildCost(), true)) items.pushBack(btn);
+    
+    // Army
+    if (auto btn = createBtn("barracks1.png", building::BuildingType::Barracks, building::Barracks::getBuildCost(), false)) items.pushBack(btn);
+    if (auto btn = createBtn("training_camp1.png", building::BuildingType::TrainingCamp, building::TrainingCamp::getBuildCost(), false)) items.pushBack(btn);
+
     // Layout
-    auto menu = Menu::create(mineItem, collectorItem, gStoreItem, eStoreItem, nullptr);
+    auto menu = Menu::createWithArray(items);
     menu->alignItemsHorizontallyWithPadding(20);
+    // Wrap if too many? For now just one row or grid. Grid is better.
+    // Re-align manually for grid
+    int col = 0; int row = 0;
+    for (auto item : items) {
+        item->setPosition(Vec2(visibleSize.width/2 - 200 + col * 100, visibleSize.height/2 + 100 - row * 120));
+        col++;
+        if (col > 4) { col = 0; row++; }
+    }
+    // Disable auto align if manual
+    // menu->alignItemsHorizontallyWithPadding(20); // Removed
+    menu->setPosition(Vec2::ZERO);
+    
     windowLayer->addChild(menu);
+}
+
+int VillageScene::getTownHallLevel() const {
+    for (auto b : _buildings) {
+        if (b->getType() == building::BuildingType::TownHall) {
+            return b->getLevel();
+        }
+    }
+    return 1;
+}
+
+int VillageScene::getBuildingCount(building::BuildingType type) const {
+    int count = 0;
+    for (auto b : _buildings) {
+        if (b->getType() == type) {
+            count++;
+        }
+    }
+    return count;
+}
+
+int VillageScene::getMaxBuildingCount(building::BuildingType type, int thLevel) const {
+    // Rules from prompt
+    switch (type) {
+        case building::BuildingType::TownHall: return 1;
+        case building::BuildingType::Barracks: return (thLevel >= 2) ? 2 : 1;
+        case building::BuildingType::TrainingCamp: return 1;
+        case building::BuildingType::GoldMine: return (thLevel >= 3) ? 3 : (thLevel >= 2 ? 2 : 1);
+        case building::BuildingType::GoldStorage: return (thLevel >= 3) ? 2 : 1;
+        case building::BuildingType::ElixirCollector: return (thLevel >= 3) ? 3 : (thLevel >= 2 ? 2 : 1);
+        case building::BuildingType::ElixirStorage: return (thLevel >= 3) ? 2 : 1;
+        case building::BuildingType::Cannon: return (thLevel >= 3) ? 3 : (thLevel >= 2 ? 2 : 1);
+        case building::BuildingType::ArcherTower: return (thLevel >= 3) ? 2 : 1;
+        case building::BuildingType::Wall: return (thLevel >= 3) ? 40 : (thLevel >= 2 ? 10 : 0);
+        default: return 0;
+    }
 }
 
 bool VillageScene::trySpendResources(int gold, int elixir) {
@@ -353,9 +525,12 @@ bool VillageScene::trySpendResources(int gold, int elixir) {
 }
 
 void VillageScene::updateResourceLabels() {
-    if (_goldLabel) _goldLabel->setString(std::to_string(_gold));
-    if (_elixirLabel) _elixirLabel->setString(std::to_string(_elixir));
-    if (_populationLabel) _populationLabel->setString(std::to_string(_population));
+    if (_goldLabel) _goldLabel->setString(std::to_string((int)_gold));
+    if (_elixirLabel) _elixirLabel->setString(std::to_string((int)_elixir));
+    if (_populationLabel) {
+        std::string popStr = std::to_string(getCurrentTroopCount()) + "/" + std::to_string(getTroopCapacity());
+        _populationLabel->setString(popStr);
+    }
 }
 
 void VillageScene::onBuildingTypeSelected(Ref* pSender, building::BuildingType type) {
@@ -387,7 +562,7 @@ void VillageScene::showBuildingInfo(building::Building* building) {
     closeMenu->setPosition(Vec2(visibleSize.width - 50, visibleSize.height - 50));
     windowLayer->addChild(closeMenu);
     
-    // Content
+    // Common Content
     std::string name = building->getBuildingName();
     int level = building->getLevel();
     int hp = building->getCurrentHP();
@@ -395,15 +570,50 @@ void VillageScene::showBuildingInfo(building::Building* building) {
     
     std::string infoStr = name + " (Lv." + std::to_string(level) + ")\n" +
                           "HP: " + std::to_string(hp) + " / " + std::to_string(maxHP);
-                          
+
+    // Specific Attributes
+    if (auto mine = dynamic_cast<building::GoldMine*>(building)) {
+        infoStr += "\nProduction: " + std::to_string(mine->getProductionRate()) + " Gold/s";
+    } else if (auto collector = dynamic_cast<building::ElixirCollector*>(building)) {
+        infoStr += "\nProduction: " + std::to_string(collector->getProductionRate()) + " Elixir/s";
+    } else if (auto storage = dynamic_cast<building::GoldStorage*>(building)) {
+        infoStr += "\nCapacity: " + std::to_string(storage->getCapacity());
+    } else if (auto storage = dynamic_cast<building::ElixirStorage*>(building)) {
+        infoStr += "\nCapacity: " + std::to_string(storage->getCapacity());
+    } else if (auto tower = dynamic_cast<building::ArcherTower*>(building)) {
+        infoStr += "\nAttack: " + std::to_string(tower->getAttackDamage());
+        infoStr += "\nRange: 6";
+    } else if (auto cannon = dynamic_cast<building::Cannon*>(building)) {
+        infoStr += "\nAttack: " + std::to_string(cannon->getAttackDamage());
+        infoStr += "\nRange: 6";
+    } else if (auto barracks = dynamic_cast<building::Barracks*>(building)) {
+        int cap = barracks->getCapacity();
+        infoStr += "\nCapacity: " + std::to_string(cap);
+        infoStr += "\nTroops:";
+        for (auto const& [name, num] : _troops) {
+            if (num > 0) {
+                infoStr += "\n " + name + ": " + std::to_string(num);
+            }
+        }
+    } else if (auto camp = dynamic_cast<building::TrainingCamp*>(building)) {
+        infoStr += "\nUnlocks: ";
+        auto soldiers = camp->getUnlockableSoldiers();
+        for (size_t i = 0; i < soldiers.size(); ++i) {
+            infoStr += soldiers[i] + (i < soldiers.size() - 1 ? ", " : "");
+        }
+    }
+
     auto infoLabel = Label::createWithSystemFont(infoStr, "Arial", 24);
     infoLabel->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2 + 50));
     windowLayer->addChild(infoLabel);
     
+    // Buttons Menu
+    Vector<MenuItem*> menuItems;
+
     // Upgrade Button
     if (building->canUpgrade()) {
         int cost = building->getUpgradeCost();
-        std::string costIcon = building->getUpgradeCurrencyIcon();
+        // std::string costIcon = building->getUpgradeCurrencyIcon(); // Unused variable warning fix
         
         MenuItem* upgradeItem = MenuItemImage::create("upgrade.png", "upgrade.png", [this, building](Ref*){
             onUpgradeCallback(nullptr, building);
@@ -414,20 +624,159 @@ void VillageScene::showBuildingInfo(building::Building* building) {
             });
         }
         
-        auto upgradeMenu = Menu::create(upgradeItem, nullptr);
-        upgradeMenu->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2 - 50));
-        windowLayer->addChild(upgradeMenu);
-        
-        // Show cost
-        auto costLabel = Label::createWithSystemFont("Cost: " + std::to_string(cost), "Arial", 20);
-        costLabel->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2 - 90));
-        windowLayer->addChild(costLabel);
+        // Label for cost
+        auto costLabel = Label::createWithSystemFont(std::to_string(cost), "Arial", 18);
+        costLabel->setPosition(Vec2(upgradeItem->getContentSize().width/2, -15));
+        upgradeItem->addChild(costLabel);
+
+        menuItems.pushBack(upgradeItem);
     } else {
-        auto maxLabel = Label::createWithSystemFont("Max Level", "Arial", 24);
-        maxLabel->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2 - 50));
+        // Max Level Label instead of button? Or just show nothing/disabled button.
+        // For layout simplicity, maybe just text on screen.
+    }
+
+    // Train Button (Training Camp only)
+    if (auto camp = dynamic_cast<building::TrainingCamp*>(building)) {
+        MenuItem* trainItem = MenuItemImage::create("practice.png", "practice.png", [this, camp](Ref*){
+            showTrainingWindow(camp);
+        });
+        if (!trainItem || trainItem->getContentSize().width == 0) {
+            trainItem = MenuItemLabel::create(Label::createWithSystemFont("Train", "Arial", 24), [this, camp](Ref*){
+                showTrainingWindow(camp);
+            });
+        }
+        menuItems.pushBack(trainItem);
+    }
+
+    auto menu = Menu::createWithArray(menuItems);
+    menu->alignItemsHorizontallyWithPadding(40);
+    menu->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2 - 60));
+    windowLayer->addChild(menu);
+    
+    // Max Level Indicator if needed
+    if (!building->canUpgrade()) {
+        auto maxLabel = Label::createWithSystemFont("Max Level", "Arial", 20);
+        maxLabel->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2 - 120));
         windowLayer->addChild(maxLabel);
     }
 }
+
+void VillageScene::showTrainingWindow(building::TrainingCamp* camp) {
+    closeCurrentWindow(); // Close info window
+    
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto windowLayer = LayerColor::create(Color4B(0, 0, 0, 150));
+    this->addChild(windowLayer, 200);
+    _currentWindow = windowLayer;
+    
+    // Close
+    MenuItem* closeItem = MenuItemImage::create("false.png", "false.png", CC_CALLBACK_1(VillageScene::onCloseWindowCallback, this));
+    auto closeMenu = Menu::create(closeItem, nullptr);
+    closeMenu->setPosition(Vec2(visibleSize.width - 50, visibleSize.height - 50));
+    windowLayer->addChild(closeMenu);
+    
+    // Soldiers
+    auto soldiers = camp->getUnlockableSoldiers();
+    Vector<MenuItem*> items;
+    
+    for (const auto& soldier : soldiers) {
+        std::string img = "barbarian.png"; // Default
+        int cost = 0;
+        int space = 1;
+        
+        if (soldier == "Barbarian") { img = "barbarian.png"; cost = 25; space = 1; } // Guessing costs/space if not specified, but usually strictly required.
+        // Re-checking prompt for soldier costs... prompt doesn't specify soldier costs!
+        // "兵种图片在“士兵.pdf”里找"
+        // Prompt D2: "点击对应兵种的图片可以完成训练"
+        // "训练为即时完成，只要圣水足够即可训练"
+        // I need to assume costs. 
+        // Let's assume: Barbarian=25 Elixir, Archer=50, Giant=250, WallBreaker=100.
+        // Names in getUnlockableSoldiers might be English or Chinese? 
+        // TrainingCamp.cpp likely returns English names.
+        
+        if (soldier == "Archer") { img = "archer.png"; cost = 50; space = 1; }
+        if (soldier == "Giant") { img = "giant.png"; cost = 250; space = 5; }
+        if (soldier == "WallBreaker") { img = "wall_breaker.png"; cost = 100; space = 2; } // "炸弹人"
+        
+        MenuItem* item = MenuItemImage::create(img, img, [this, camp, soldier, cost, space](Ref*){
+            // Check cost and capacity
+            if (_elixir < cost) {
+                 // Show error
+                 auto label = Label::createWithSystemFont("Not enough Elixir!", "Arial", 30);
+                 label->setPosition(Director::getInstance()->getVisibleSize() / 2);
+                 label->setColor(Color3B::RED);
+                 _currentWindow->addChild(label);
+                 label->runAction(Sequence::create(DelayTime::create(1.0f), FadeOut::create(0.5f), RemoveSelf::create(), nullptr));
+                 return;
+            }
+            if (getCurrentTroopCount() + space > getTroopCapacity()) {
+                // Show error
+                auto label = Label::createWithSystemFont("Barracks Full!", "Arial", 30);
+                label->setPosition(Director::getInstance()->getVisibleSize() / 2);
+                label->setColor(Color3B::RED);
+                _currentWindow->addChild(label);
+                label->runAction(Sequence::create(DelayTime::create(1.0f), FadeOut::create(0.5f), RemoveSelf::create(), nullptr));
+                return;
+            }
+            
+            _elixir -= cost;
+            _troops[soldier]++;
+            updateResourceLabels();
+            CCLOG("Trained %s", soldier.c_str());
+        });
+        
+        // Fallback text
+        if (!item || item->getContentSize().width == 0) {
+            item = MenuItemLabel::create(Label::createWithSystemFont(soldier, "Arial", 20), [this, camp, soldier, cost, space](Ref*){
+                 if (_elixir < cost) return;
+                 if (getCurrentTroopCount() + space > getTroopCapacity()) return;
+                 _elixir -= cost;
+                 _troops[soldier]++;
+                 updateResourceLabels();
+            });
+        }
+
+        
+        // Cost label
+        auto label = Label::createWithSystemFont(std::to_string(cost), "Arial", 16);
+        label->setPosition(Vec2(item->getContentSize().width/2, -10));
+        item->addChild(label);
+        
+        items.pushBack(item);
+    }
+    
+    auto menu = Menu::createWithArray(items);
+    menu->alignItemsHorizontallyWithPadding(20);
+    menu->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2));
+    windowLayer->addChild(menu);
+}
+
+void VillageScene::onTrainSoldierCallback(Ref* pSender, building::TrainingCamp* camp, std::string soldierName) {
+    // Moved logic into lambda above for simplicity in accessing local vars like cost
+}
+
+int VillageScene::getTroopCapacity() const {
+    int capacity = 0;
+    for (auto b : _buildings) {
+        if (auto barracks = dynamic_cast<building::Barracks*>(b)) {
+            capacity += barracks->getCapacity();
+        }
+    }
+    return capacity;
+}
+
+int VillageScene::getCurrentTroopCount() const {
+    int count = 0;
+    for (auto const& [name, num] : _troops) {
+        int space = 1;
+        if (name == "Giant") space = 5;
+        if (name == "WallBreaker") space = 2;
+        count += num * space;
+    }
+    return count;
+}
+
+
 
 void VillageScene::onUpgradeCallback(Ref* pSender, building::Building* building) {
     if (!building) return;

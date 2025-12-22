@@ -15,4 +15,16 @@ Building::Building()
 Building::~Building() {
 }
 
+void Building::takeDamage(int damage) {
+    _currentHP -= damage;
+    if (_currentHP < 0) _currentHP = 0;
+    
+    // Add red flash effect
+    this->runAction(cocos2d::Sequence::create(
+        cocos2d::TintTo::create(0.1f, 255, 0, 0),
+        cocos2d::TintTo::create(0.1f, 255, 255, 255),
+        nullptr
+    ));
+}
+
 } // namespace building

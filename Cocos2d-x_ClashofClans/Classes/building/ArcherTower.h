@@ -1,13 +1,13 @@
-#ifndef __ELIXIR_STORAGE_H__
-#define __ELIXIR_STORAGE_H__
+#ifndef __ARCHER_TOWER_H__
+#define __ARCHER_TOWER_H__
 
 #include "Building.h"
 
 namespace building {
 
-class ElixirStorage : public Building {
+class ArcherTower : public Building {
 public:
-    static ElixirStorage* create();
+    static ArcherTower* create();
     virtual bool init() override;
 
     virtual void upgrade() override;
@@ -16,7 +16,10 @@ public:
     virtual bool canUpgrade() const override;
     virtual void showInfo() override;
     
-    int getCapacity() const;
+    // Combat attributes
+    int getAttackDamage() const;
+    float getAttackRange() const;
+    float getAttackInterval() const;
     
     static int getBuildCost() { return 300; }
     static std::string getBuildCurrencyIcon() { return "coin.png"; }
@@ -27,4 +30,4 @@ private:
 
 } // namespace building
 
-#endif // __ELIXIR_STORAGE_H__
+#endif // __ARCHER_TOWER_H__
