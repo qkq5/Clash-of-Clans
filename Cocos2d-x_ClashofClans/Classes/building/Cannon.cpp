@@ -22,11 +22,6 @@ bool Cannon::init() {
     _level = 1;
     _maxHP = 300;
     _currentHP = _maxHP;
-    
-    // Combat
-    _attackRange = 6.0f * 32.0f; // 6 tiles
-    _attackInterval = 1.0f;
-    _attackDamage = 70; // Level 1
 
     updateTexture();
     return true;
@@ -44,10 +39,8 @@ void Cannon::upgrade() {
     
     if (_level == 2) {
         _maxHP = 350;
-        _attackDamage = 140;
     } else if (_level == 3) {
         _maxHP = 400;
-        _attackDamage = 210;
     }
     
     _currentHP = _maxHP;
@@ -66,6 +59,20 @@ bool Cannon::canUpgrade() const {
 
 void Cannon::showInfo() {
     // Handled by VillageScene
+}
+
+int Cannon::getAttackDamage() const {
+    if (_level == 1) return 70;
+    if (_level == 2) return 140;
+    return 210;
+}
+
+float Cannon::getAttackRange() const {
+    return 6.0f;
+}
+
+float Cannon::getAttackInterval() const {
+    return 1.0f;
 }
 
 } // namespace building

@@ -9,10 +9,6 @@ Building::Building()
 , _buildingName("Building")
 , _type(BuildingType::TownHall)
 , _gridPosition(cocos2d::Vec2::ZERO)
-, _attackDamage(0)
-, _attackRange(0)
-, _attackInterval(0)
-, _attackTimer(0)
 {
 }
 
