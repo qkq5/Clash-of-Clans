@@ -680,67 +680,69 @@ void VillageScene::showTrainingWindow(building::TrainingCamp* camp) {
     Vector<MenuItem*> items;
     
     for (const auto& soldier : soldiers) {
-        std::string img = "barbarian.png"; // Default
-        int cost = 0;
+        std::string img = "barbarian1.png"; 
+        int cost = 25;
         int space = 1;
         
-        if (soldier == "Barbarian") { img = "barbarian.png"; cost = 25; space = 1; } // Guessing costs/space if not specified, but usually strictly required.
-        // Re-checking prompt for soldier costs... prompt doesn't specify soldier costs!
-        // "兵种图片在“士兵.pdf”里找"
-        // Prompt D2: "点击对应兵种的图片可以完成训练"
-        // "训练为即时完成，只要圣水足够即可训练"
-        // I need to assume costs. 
-        // Let's assume: Barbarian=25 Elixir, Archer=50, Giant=250, WallBreaker=100.
-        // Names in getUnlockableSoldiers might be English or Chinese? 
-        // TrainingCamp.cpp likely returns English names.
+        if (soldier == "Barbarian") { img = "barbarian1.png"; cost = 25; space = 1; }
+        if (soldier == "Archer") { img = "archer1.png"; cost = 50; space = 1; }
+        if (soldier == "Giant") { img = "giant1.png"; cost = 250; space = 5; }
+        if (soldier == "WallBreaker") { img = "bomber1.png"; cost = 100; space = 2; }
         
-        if (soldier == "Archer") { img = "archer.png"; cost = 50; space = 1; }
-        if (soldier == "Giant") { img = "giant.png"; cost = 250; space = 5; }
-        if (soldier == "WallBreaker") { img = "wall_breaker.png"; cost = 100; space = 2; } // "炸弹人"
+        // Label pointer to be captured
+        auto countLabel = Label::createWithSystemFont("", "Arial", 14);
         
-        MenuItem* item = MenuItemImage::create(img, img, [this, camp, soldier, cost, space](Ref*){
+        MenuItem* item = MenuItemImage::create(img, img, [this, camp, soldier, cost, space, countLabel](Ref*){
             // Check cost and capacity
             if (_elixir < cost) {
-                 // Show error
                  auto label = Label::createWithSystemFont("Not enough Elixir!", "Arial", 30);
                  label->setPosition(Director::getInstance()->getVisibleSize() / 2);
                  label->setColor(Color3B::RED);
                  _currentWindow->addChild(label);
-                 label->runAction(Sequence::create(DelayTime::create(1.0f), FadeOut::create(0.5f), RemoveSelf::create(), nullptr));
+                 label->runAction(Sequence::create(DelayTime::create(0.5f), FadeOut::create(0.5f), RemoveSelf::create(), nullptr));
                  return;
             }
             if (getCurrentTroopCount() + space > getTroopCapacity()) {
-                // Show error
-                auto label = Label::createWithSystemFont("Barracks Full!", "Arial", 30);
+                auto label = Label::createWithSystemFont("Camp Full!", "Arial", 30);
                 label->setPosition(Director::getInstance()->getVisibleSize() / 2);
                 label->setColor(Color3B::RED);
                 _currentWindow->addChild(label);
-                label->runAction(Sequence::create(DelayTime::create(1.0f), FadeOut::create(0.5f), RemoveSelf::create(), nullptr));
+                label->runAction(Sequence::create(DelayTime::create(0.5f), FadeOut::create(0.5f), RemoveSelf::create(), nullptr));
                 return;
             }
             
             _elixir -= cost;
             _troops[soldier]++;
             updateResourceLabels();
-            CCLOG("Trained %s", soldier.c_str());
+            
+            // Update the specific label immediately
+            std::string countStr = std::to_string(_troops[soldier]) + "/" + std::to_string(getTroopCapacity());
+            countLabel->setString(countStr);
         });
         
-        // Fallback text
+        // Fallback text if image missing
         if (!item || item->getContentSize().width == 0) {
-            item = MenuItemLabel::create(Label::createWithSystemFont(soldier, "Arial", 20), [this, camp, soldier, cost, space](Ref*){
+            item = MenuItemLabel::create(Label::createWithSystemFont(soldier, "Arial", 20), [this, camp, soldier, cost, space, countLabel](Ref*){
                  if (_elixir < cost) return;
                  if (getCurrentTroopCount() + space > getTroopCapacity()) return;
                  _elixir -= cost;
                  _troops[soldier]++;
                  updateResourceLabels();
+                 std::string countStr = std::to_string(_troops[soldier]) + "/" + std::to_string(getTroopCapacity());
+                 countLabel->setString(countStr);
             });
         }
 
-        
         // Cost label
         auto label = Label::createWithSystemFont(std::to_string(cost), "Arial", 16);
-        label->setPosition(Vec2(item->getContentSize().width/2, -10));
+        label->setPosition(Vec2(item->getContentSize().width/2, -15));
         item->addChild(label);
+        
+        // Count/Capacity Label
+        std::string initCountStr = std::to_string(_troops[soldier]) + "/" + std::to_string(getTroopCapacity());
+        countLabel->setString(initCountStr);
+        countLabel->setPosition(Vec2(item->getContentSize().width/2, -35));
+        item->addChild(countLabel);
         
         items.pushBack(item);
     }
