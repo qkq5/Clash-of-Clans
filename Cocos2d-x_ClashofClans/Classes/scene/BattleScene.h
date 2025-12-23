@@ -87,7 +87,27 @@ private:
     building::Building* findTargetForSoldier(soldier::Soldier* s);
     
     // Projectiles
-    void fireProjectile(cocos2d::Vec2 start, cocos2d::Vec2 end, std::function<void()> onHit);
+    void fireProjectile(cocos2d::Vec2 start, cocos2d::Vec2 end, std::function<void()> onHit, std::string texture = "bullet.png");
+
+    // Pathfinding
+    void initCollisionMap();
+    std::vector<cocos2d::Vec2> findPath(cocos2d::Vec2 start, cocos2d::Vec2 end);
+    bool isWalkable(int x, int y);
+    cocos2d::Vec2 worldToGrid(cocos2d::Vec2 worldPos);
+    cocos2d::Vec2 gridToWorld(cocos2d::Vec2 gridPos);
+    
+    struct PathNode {
+        int x, y;
+        int g, h;
+        PathNode* parent;
+        PathNode(int _x, int _y) : x(_x), y(_y), g(0), h(0), parent(nullptr) {}
+        int f() const { return g + h; }
+        bool operator==(const PathNode& other) const { return x == other.x && y == other.y; }
+    };
+
+    std::vector<bool> _collisionMap; // 50x50
+    int _mapWidth = 50;
+    int _mapHeight = 50;
 
 private:
     // Replay / Recording

@@ -7,7 +7,11 @@
 #include "../building/TrainingCamp.h"
 #include "../building/GoldStorage.h"
 #include "../building/ElixirStorage.h"
-#include "MainMenuScene.h" // For end button maybe? Or just direct
+#include "MainMenuScene.h"
+#include <queue>
+#include <set>
+#include <cmath>
+#include <algorithm>
 
 USING_NS_CC;
 
@@ -68,7 +72,7 @@ bool BattleScene::init(int level, int barbarianCount, int archerCount, int bombe
     _selectedTroop = soldier::SoldierType::Barbarian; // Default
     
     // Background & Map
-    _mapNode = Node::create();
+    _mapNode = cocos2d::Node::create();
     this->addChild(_mapNode);
 
     int mapWidth = 50;
@@ -174,6 +178,8 @@ void BattleScene::setupLevel(int level) {
         addB(building::Cannon::create(), center + Vec2(-200, -200));
         addB(building::ArcherTower::create(), center + Vec2(200, -200));
     }
+
+    initCollisionMap();
 }
 
 void BattleScene::setupUI() {
@@ -218,7 +224,7 @@ void BattleScene::setupUI() {
     this->addChild(surrenderMenu, 20);
 
     // 2. Bottom Bar (Initially Hidden)
-    _troopSelectionNode = Node::create();
+    _troopSelectionNode = cocos2d::Node::create();
     this->addChild(_troopSelectionNode, 10);
     _troopSelectionNode->setVisible(false);
     
@@ -422,15 +428,29 @@ void BattleScene::update(float dt) {
         
         // Find Target if none
         if (!s->getTarget() || s->getTarget()->getCurrentHP() <= 0) {
-            s->setTarget(findTargetForSoldier(s));
+            auto newTarget = findTargetForSoldier(s);
+            s->setTarget(newTarget);
+            if (newTarget) {
+                s->setPath(findPath(s->getPosition(), newTarget->getPosition()));
+            }
         }
         
         auto target = s->getTarget();
         if (target) {
             float dist = s->getPosition().distance(target->getPosition());
             
+            // Adjust range for target size (Edge-to-Edge)
+            Rect targetBox = target->getBoundingBox();
+            // Use slightly smaller radius to ensure we are well within range, or full radius?
+            // Usually Range is "distance to target". If target is big, center is far.
+            // Let's add the "radius" of the target to the soldier's range.
+            float targetRadius = std::max(targetBox.size.width, targetBox.size.height) / 2.0f;
+            // Reduce slightly (e.g. -5) to require getting a bit closer than just touching the bounding box, 
+            // or just use full radius. Full radius is safer to avoid "stuck but cant attack".
+            float effectiveRange = s->getAttackRange() + targetRadius;
+            
             // Attack or Move
-            if (dist <= s->getAttackRange()) {
+            if (dist <= effectiveRange) {
                 // Attack
                 s->setAttackTimer(s->getAttackTimer() + dt);
                 if (s->getAttackTimer() >= s->getAttackInterval()) {
@@ -457,16 +477,18 @@ void BattleScene::update(float dt) {
                                      b->takeDamage(s->getAttackDamage());
                                  }
                              }
-                         });
+                         }, "bomb.png");
                     }
                     
                     // Mark as attacked
-                    // Removed goal.png logic as per request
                 }
             } else {
-                // Move
-                Vec2 dir = (target->getPosition() - s->getPosition()).getNormalized();
-                s->setPosition(s->getPosition() + dir * s->getMoveSpeed() * dt);
+                // Move using Pathfinding
+                if (!s->hasPath()) {
+                     // Try to calculate path again if lost or finished but not in range
+                     s->setPath(findPath(s->getPosition(), target->getPosition()));
+                }
+                s->moveAlongPath(dt);
             }
         }
     }
@@ -574,8 +596,11 @@ building::Building* BattleScene::findTargetForSoldier(soldier::Soldier* s) {
     return target;
 }
 
-void BattleScene::fireProjectile(Vec2 start, Vec2 end, std::function<void()> onHit) {
-    auto bullet = Sprite::create("bullet.png");
+void BattleScene::fireProjectile(Vec2 start, Vec2 end, std::function<void()> onHit, std::string texture) {
+    auto bullet = Sprite::create(texture);
+    if (!bullet) {
+        bullet = Sprite::create("bullet.png");
+    }
     bullet->setPosition(start);
     _mapNode->addChild(bullet, 100);
     
@@ -658,6 +683,200 @@ void BattleScene::showResult(bool win) {
 
 void BattleScene::returnToVillage() {
     Director::getInstance()->popScene();
+}
+
+// Pathfinding Implementation
+void BattleScene::initCollisionMap() {
+    _collisionMap.assign(_mapWidth * _mapHeight, true);
+    for (auto b : _enemyBuildings) {
+        // Walls are also obstacles (unless destroyed, but for now static map)
+        
+        Rect bbox = b->getBoundingBox();
+        
+        // Reduce collision size by 50% as requested (centered)
+        float cx = bbox.getMidX();
+        float cy = bbox.getMidY();
+        float newW = bbox.size.width * 0.5f;
+        float newH = bbox.size.height * 0.5f;
+        
+        // Apply shrinking to avoid boundary issues
+        float minX = cx - newW / 2.0f + 1;
+        float minY = cy - newH / 2.0f + 1;
+        float maxX = cx + newW / 2.0f - 1;
+        float maxY = cy + newH / 2.0f - 1;
+        
+        Vec2 min = worldToGrid(Vec2(minX, minY));
+        Vec2 max = worldToGrid(Vec2(maxX, maxY));
+        
+        for (int y = (int)min.y; y <= (int)max.y; ++y) {
+            for (int x = (int)min.x; x <= (int)max.x; ++x) {
+                if (x >= 0 && x < _mapWidth && y >= 0 && y < _mapHeight) {
+                    _collisionMap[y * _mapWidth + x] = false;
+                }
+            }
+        }
+    }
+}
+
+Vec2 BattleScene::worldToGrid(Vec2 worldPos) {
+    return Vec2((int)(worldPos.x / 32), (int)(worldPos.y / 32));
+}
+
+Vec2 BattleScene::gridToWorld(Vec2 gridPos) {
+    return Vec2(gridPos.x * 32 + 16, gridPos.y * 32 + 16);
+}
+
+bool BattleScene::isWalkable(int x, int y) {
+    if (x < 0 || x >= _mapWidth || y < 0 || y >= _mapHeight) return false;
+    return _collisionMap[y * _mapWidth + x];
+}
+
+std::vector<Vec2> BattleScene::findPath(Vec2 start, Vec2 end) {
+    Vec2 startGrid = worldToGrid(start);
+    Vec2 endGrid = worldToGrid(end);
+    
+    // If start == end, return empty
+    if (startGrid == endGrid) return {};
+    
+    // If end is blocked, find nearest walkable neighbor? 
+    // Or just path to it as close as possible?
+    // For now, if end is blocked (it IS blocked because it's a building), we target a neighbor.
+    // The target is the building, so endGrid is inside the building.
+    // We need to find a path to a tile ADJACENT to the building.
+    
+    if (!isWalkable(endGrid.x, endGrid.y)) {
+        // Find nearest walkable neighbor to start
+        // Simple BFS or just check neighbors
+        // Actually, A* to the "nearest walkable tile to end" is better.
+        // Let's modify A* goal condition: if we reach a tile adjacent to endGrid (if endGrid is the target building).
+        // But generic A* goes to exact tile.
+        
+        // Strategy: Find all walkable tiles adjacent to the target building.
+        // Pick the one closest to start.
+        // Set that as new endGrid.
+        
+        float minD = 99999;
+        Vec2 bestEnd = endGrid;
+        bool found = false;
+        
+        // Search radius around endGrid (assuming building size up to 5x5)
+        for (int dy = -4; dy <= 4; ++dy) {
+            for (int dx = -4; dx <= 4; ++dx) {
+                int nx = endGrid.x + dx;
+                int ny = endGrid.y + dy;
+                if (isWalkable(nx, ny)) {
+                    // Check if this tile is adjacent to the blocked region of the target?
+                    // Or simply: closest walkable tile to the original endGrid.
+                    float d = startGrid.distance(Vec2(nx, ny)) + Vec2(nx, ny).distance(endGrid)*0.1f; // Heuristic
+                    // Actually we want closest to TARGET, but reachable from START.
+                    // Just closest to target center is good.
+                    float d2 = Vec2(nx, ny).distance(endGrid);
+                    
+                    if (d2 < minD) {
+                         minD = d2;
+                         bestEnd = Vec2(nx, ny);
+                         found = true;
+                    }
+                }
+            }
+        }
+        if (found) endGrid = bestEnd;
+        else return {}; // No reachable tile found
+    }
+    
+    // Standard A*
+    struct NodeWrapper {
+        int x, y;
+        int g, h;
+        NodeWrapper* parent;
+        NodeWrapper(int _x, int _y) : x(_x), y(_y), g(0), h(0), parent(nullptr) {}
+        int f() const { return g + h; }
+    };
+    
+    auto comp = [](NodeWrapper* a, NodeWrapper* b) { return a->f() > b->f(); };
+    std::priority_queue<NodeWrapper*, std::vector<NodeWrapper*>, decltype(comp)> openList(comp);
+    std::vector<NodeWrapper*> allNodes; // For cleanup
+    std::set<std::pair<int, int>> closedList;
+    std::set<std::pair<int, int>> openSet; // For fast lookup
+    
+    NodeWrapper* startNode = new NodeWrapper(startGrid.x, startGrid.y);
+    startNode->g = 0;
+    startNode->h = (std::abs(endGrid.x - startGrid.x) + std::abs(endGrid.y - startGrid.y)) * 10;
+    
+    openList.push(startNode);
+    openSet.insert({startNode->x, startNode->y});
+    allNodes.push_back(startNode);
+    
+    NodeWrapper* finalNode = nullptr;
+    
+    int directions[8][2] = {
+        {0, 1}, {0, -1}, {1, 0}, {-1, 0}, // Cardinal
+        {1, 1}, {1, -1}, {-1, 1}, {-1, -1} // Diagonal
+    };
+    
+    while (!openList.empty()) {
+        NodeWrapper* current = openList.top();
+        openList.pop();
+        openSet.erase({current->x, current->y});
+        
+        if (current->x == endGrid.x && current->y == endGrid.y) {
+            finalNode = current;
+            break;
+        }
+        
+        closedList.insert({current->x, current->y});
+        
+        for (int i = 0; i < 8; ++i) {
+            int nx = current->x + directions[i][0];
+            int ny = current->y + directions[i][1];
+            
+            if (!isWalkable(nx, ny)) continue;
+            if (closedList.count({nx, ny})) continue;
+            
+            // Diagonal check: prevent cutting corners if adjacent cardinals are blocked
+            if (i >= 4) {
+                if (!isWalkable(current->x + directions[i][0], current->y) ||
+                    !isWalkable(current->x, current->y + directions[i][1])) {
+                    continue;
+                }
+            }
+            
+            int moveCost = (i >= 4) ? 14 : 10;
+            int newG = current->g + moveCost;
+            
+            bool inOpen = openSet.count({nx, ny});
+            
+            // Simplification: Not checking if new path to existing open node is better (usually not needed for simple grid)
+            // But strict A* requires it. 
+            // For now, simple implementation: if in open, skip (suboptimal but faster), or update.
+            // Let's just add if not in open.
+            
+            if (!inOpen) {
+                NodeWrapper* neighbor = new NodeWrapper(nx, ny);
+                neighbor->g = newG;
+                neighbor->h = (std::abs(endGrid.x - nx) + std::abs(endGrid.y - ny)) * 10;
+                neighbor->parent = current;
+                openList.push(neighbor);
+                openSet.insert({nx, ny});
+                allNodes.push_back(neighbor);
+            }
+        }
+    }
+    
+    std::vector<Vec2> path;
+    if (finalNode) {
+        NodeWrapper* curr = finalNode;
+        while (curr) {
+            path.push_back(gridToWorld(Vec2(curr->x, curr->y)));
+            curr = curr->parent;
+        }
+        std::reverse(path.begin(), path.end());
+    }
+    
+    // Cleanup
+    for (auto n : allNodes) delete n;
+    
+    return path;
 }
 
 } // namespace scene

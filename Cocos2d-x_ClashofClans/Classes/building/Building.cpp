@@ -2,6 +2,23 @@
 
 namespace building {
 
+static void showDamageEffect(cocos2d::Node* node, int damage) {
+    if (!node || !node->getParent()) return;
+    auto label = cocos2d::Label::createWithSystemFont("-" + std::to_string(damage), "Arial", 24);
+    label->setColor(cocos2d::Color3B::RED);
+    cocos2d::Vec2 pos = node->getPosition();
+    cocos2d::Size size = node->getContentSize();
+    float scale = node->getScale();
+    pos.x += (size.width * scale) / 2 + 10;
+    pos.y += (size.height * scale) / 2;
+    label->setPosition(pos);
+    node->getParent()->addChild(label, 1000);
+    auto move = cocos2d::MoveBy::create(1.0f, cocos2d::Vec2(0, 32));
+    auto fade = cocos2d::FadeOut::create(1.0f);
+    auto spawn = cocos2d::Spawn::create(move, fade, nullptr);
+    label->runAction(cocos2d::Sequence::create(spawn, cocos2d::RemoveSelf::create(), nullptr));
+}
+
 Building::Building() 
 : _level(1)
 , _maxHP(100)
@@ -9,6 +26,7 @@ Building::Building()
 , _buildingName("Building")
 , _type(BuildingType::TownHall)
 , _gridPosition(cocos2d::Vec2::ZERO)
+, _gridSize(cocos2d::Size(1, 1))
 , _attackDamage(0)
 , _attackRange(0)
 , _attackInterval(0)
@@ -19,7 +37,15 @@ Building::Building()
 Building::~Building() {
 }
 
+bool Building::init() {
+    if (!Sprite::init()) {
+        return false;
+    }
+    return true;
+}
+
 void Building::takeDamage(int damage) {
+    showDamageEffect(this, damage);
     _currentHP -= damage;
     if (_currentHP < 0) _currentHP = 0;
     

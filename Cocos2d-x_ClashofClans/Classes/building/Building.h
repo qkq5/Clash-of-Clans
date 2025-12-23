@@ -24,6 +24,8 @@ public:
     Building();
     virtual ~Building();
 
+    virtual bool init() override;
+
     // Core attributes
     CC_SYNTHESIZE(int, _level, Level);
     CC_SYNTHESIZE(int, _maxHP, MaxHP);
@@ -31,6 +33,7 @@ public:
     CC_SYNTHESIZE(std::string, _buildingName, BuildingName);
     CC_SYNTHESIZE(BuildingType, _type, Type);
     CC_SYNTHESIZE(cocos2d::Vec2, _gridPosition, GridPosition); // Position in grid coordinates (0-49)
+    CC_SYNTHESIZE(cocos2d::Size, _gridSize, GridSize); // Size in grid tiles (e.g., 3x3)
 
     // Combat attributes (for Defenses)
     CC_SYNTHESIZE(int, _attackDamage, AttackDamage);

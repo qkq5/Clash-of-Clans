@@ -2,6 +2,23 @@
 
 namespace soldier {
 
+static void showDamageEffect(cocos2d::Node* node, int damage) {
+    if (!node || !node->getParent()) return;
+    auto label = cocos2d::Label::createWithSystemFont("-" + std::to_string(damage), "Arial", 24);
+    label->setColor(cocos2d::Color3B::RED);
+    cocos2d::Vec2 pos = node->getPosition();
+    cocos2d::Size size = node->getContentSize();
+    float scale = node->getScale();
+    pos.x += (size.width * scale) / 2 + 10;
+    pos.y += (size.height * scale) / 2;
+    label->setPosition(pos);
+    node->getParent()->addChild(label, 1000);
+    auto move = cocos2d::MoveBy::create(1.0f, cocos2d::Vec2(0, 32));
+    auto fade = cocos2d::FadeOut::create(1.0f);
+    auto spawn = cocos2d::Spawn::create(move, fade, nullptr);
+    label->runAction(cocos2d::Sequence::create(spawn, cocos2d::RemoveSelf::create(), nullptr));
+}
+
 Soldier* Soldier::create(SoldierType type) {
     Soldier* ret = new (std::nothrow) Soldier();
     if (ret && ret->init(type)) {
@@ -79,6 +96,7 @@ bool Soldier::init(SoldierType type) {
 }
 
 void Soldier::takeDamage(int damage) {
+    showDamageEffect(this, damage);
     _hp -= damage;
     if (_hp < 0) _hp = 0;
     
@@ -100,8 +118,34 @@ void Soldier::setTarget(building::Building* target) {
     _target = target;
 }
 
+void Soldier::setPath(const std::vector<cocos2d::Vec2>& path) {
+    _path = path;
+    _currentPathIndex = 0;
+}
+
 void Soldier::update(float dt) {
-    // Logic currently handled in BattleScene
+    // Logic currently handled in BattleScene, but we can put movement here if we want.
+    // For now, we'll use a specific method called by BattleScene.
+}
+
+void Soldier::moveAlongPath(float dt) {
+    if (_path.empty()) return;
+    
+    if (_currentPathIndex < _path.size()) {
+        cocos2d::Vec2 targetPos = _path[_currentPathIndex];
+        cocos2d::Vec2 currentPos = this->getPosition();
+        float dist = currentPos.distance(targetPos);
+        
+        float step = _moveSpeed * dt;
+        
+        if (dist <= step) {
+            this->setPosition(targetPos);
+            _currentPathIndex++;
+        } else {
+            cocos2d::Vec2 dir = (targetPos - currentPos).getNormalized();
+            this->setPosition(currentPos + dir * step);
+        }
+    }
 }
 
 } // namespace soldier

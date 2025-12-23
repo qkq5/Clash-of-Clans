@@ -33,6 +33,10 @@ public:
     void setTarget(building::Building* target);
     building::Building* getTarget() const { return _target; }
     
+    void setPath(const std::vector<cocos2d::Vec2>& path);
+    void moveAlongPath(float dt);
+    bool hasPath() const { return !_path.empty() && _currentPathIndex < _path.size(); }
+    
     virtual void update(float dt) override;
 
     bool isDead() const { return _hp <= 0; }
@@ -40,6 +44,8 @@ public:
 
 private:
     building::Building* _target;
+    std::vector<cocos2d::Vec2> _path;
+    int _currentPathIndex;
 };
 
 } // namespace soldier
