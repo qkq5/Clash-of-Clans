@@ -13,6 +13,8 @@ USING_NS_CC;
 
 namespace scene {
 
+std::vector<BattleRecord> BattleScene::s_battleHistory;
+
 Scene* BattleScene::createScene(int level, int barbarianCount, int archerCount, int bomberCount, int giantCount) {
     return BattleScene::create(level, barbarianCount, archerCount, bomberCount, giantCount);
 }
@@ -27,10 +29,35 @@ BattleScene* BattleScene::create(int level, int barbarianCount, int archerCount,
     return nullptr;
 }
 
+Scene* BattleScene::createReplayScene(const BattleRecord& record) {
+    return BattleScene::createReplay(record);
+}
+
+BattleScene* BattleScene::createReplay(const BattleRecord& record) {
+    BattleScene *pRet = new(std::nothrow) BattleScene();
+    if (pRet && pRet->initReplay(record)) {
+        pRet->autorelease();
+        return pRet;
+    }
+    delete pRet;
+    return nullptr;
+}
+
 bool BattleScene::init(int level, int barbarianCount, int archerCount, int bomberCount, int giantCount) {
     if (!Scene::init()) {
         return false;
     }
+    
+    _isReplay = false;
+    _battleTimer = 0;
+    
+    // Init current record
+    _currentRecord.level = level;
+    _currentRecord.initBarb = barbarianCount;
+    _currentRecord.initArch = archerCount;
+    _currentRecord.initBomb = bomberCount;
+    _currentRecord.initGiant = giantCount;
+    _currentRecord.events.clear();
     
     _level = level;
     _barbarianCount = barbarianCount;
@@ -76,6 +103,38 @@ bool BattleScene::init(int level, int barbarianCount, int archerCount, int bombe
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
     
     this->scheduleUpdate();
+    
+    return true;
+}
+
+bool BattleScene::initReplay(const BattleRecord& record) {
+    // Reuse normal init with record params
+    if (!this->init(record.level, record.initBarb, record.initArch, record.initBomb, record.initGiant)) return false;
+    
+    _isReplay = true;
+    _replayRecord = record;
+    _replayEventIndex = 0;
+    
+    // Hide UI
+    if (_troopSelectionNode) _troopSelectionNode->setVisible(false);
+    
+    // Hide Surrender Button
+    auto surrenderMenu = this->getChildByTag(999);
+    if (surrenderMenu) {
+        surrenderMenu->setVisible(false);
+    }
+    
+    // Hide Put Soldier Button
+    auto putSoldierMenu = this->getChildByTag(998);
+    if (putSoldierMenu) {
+        putSoldierMenu->setVisible(false);
+    }
+    
+    // Add "REPLAY MODE" Label
+    auto label = Label::createWithSystemFont("REPLAY MODE", "Arial", 40);
+    label->setColor(Color3B::RED);
+    label->setPosition(Director::getInstance()->getVisibleSize().width/2, Director::getInstance()->getVisibleSize().height - 100);
+    this->addChild(label, 100);
     
     return true;
 }
@@ -140,7 +199,23 @@ void BattleScene::setupUI() {
     
     auto mainMenu = Menu::create(putBtn, nullptr);
     mainMenu->setPosition(Vec2::ZERO);
+    mainMenu->setTag(998); // Tag for Put Soldier menu
     this->addChild(mainMenu, 20);
+
+    // Surrender Button (Bottom Right)
+    MenuItem* surrenderItem = MenuItemImage::create("surrend_botton.png", "surrend_botton.png", [this](Ref*){
+        showResult(false);
+    });
+    if (!surrenderItem || surrenderItem->getContentSize().width == 0) {
+        auto label = Label::createWithSystemFont("Surrender", "Arial", 20);
+        surrenderItem = MenuItemLabel::create(label, [this](Ref*){
+            showResult(false);
+        });
+    }
+    auto surrenderMenu = Menu::create(surrenderItem, nullptr);
+    surrenderMenu->setPosition(Vec2(visibleSize.width - 50, 50));
+    surrenderMenu->setTag(999); // Tag for finding it later
+    this->addChild(surrenderMenu, 20);
 
     // 2. Bottom Bar (Initially Hidden)
     _troopSelectionNode = Node::create();
@@ -259,6 +334,7 @@ void BattleScene::updateTotalTroopsUI() {
 }
 
 bool BattleScene::onTouchBegan(Touch* touch, Event* event) {
+    if (_isReplay) return true; // Consume touch but do nothing
     Vec2 loc = touch->getLocation();
     if (loc.y < 100) return false; // Clicked on UI
     return true; // Claim touch for drag/tap
@@ -303,6 +379,17 @@ void BattleScene::spawnTroop(Vec2 pos) {
         _friendlyTroops.pushBack(s);
         
         if (_debugLabel) _debugLabel->setString("Spawned!");
+
+        // Record event if not replay
+        if (!_isReplay) {
+            DeploymentEvent evt;
+            evt.time = _battleTimer;
+            evt.soldierType = (int)_selectedTroop;
+            evt.x = pos.x;
+            evt.y = pos.y;
+            _currentRecord.events.push_back(evt);
+        }
+
     } else {
         // Show error
         auto err = Label::createWithSystemFont("Not enough troops!", "Arial", 30);
@@ -314,6 +401,21 @@ void BattleScene::spawnTroop(Vec2 pos) {
 }
 
 void BattleScene::update(float dt) {
+    _battleTimer += dt;
+    
+    if (_isReplay) {
+        while (_replayEventIndex < _replayRecord.events.size()) {
+            const auto& evt = _replayRecord.events[_replayEventIndex];
+            if (_battleTimer >= evt.time) {
+                _selectedTroop = (soldier::SoldierType)evt.soldierType;
+                spawnTroop(Vec2(evt.x, evt.y));
+                _replayEventIndex++;
+            } else {
+                break;
+            }
+        }
+    }
+
     // 1. Troops Logic
     for (auto s : _friendlyTroops) {
         if (s->isDead()) continue;
@@ -359,16 +461,7 @@ void BattleScene::update(float dt) {
                     }
                     
                     // Mark as attacked
-                    if (target->getChildren().empty()) { // Simple check to avoid multi-adding
-                         // Add goal.png? Prompt says "marked with goal.png"
-                         // Maybe just check if child exists by tag
-                         if (!target->getChildByTag(123)) {
-                             auto mark = Sprite::create("goal.png");
-                             mark->setPosition(Vec2(0, target->getContentSize().height + 20));
-                             mark->setTag(123);
-                             target->addChild(mark);
-                         }
-                    }
+                    // Removed goal.png logic as per request
                 }
             } else {
                 // Move
@@ -412,6 +505,12 @@ void BattleScene::update(float dt) {
                     
                     // Visuals
                     if (dynamic_cast<building::Cannon*>(b)) {
+                        // Rotate Cannon to face target (Assuming texture faces LEFT)
+                        Vec2 diff = targetTroop->getPosition() - b->getPosition();
+                        float angleRad = atan2(diff.y, diff.x);
+                        float angleDeg = CC_RADIANS_TO_DEGREES(angleRad);
+                        b->setRotation(180 - angleDeg);
+
                         // Cannon: Fire bullet or just recoil
                         // Let's fire a projectile for visibility
                         fireProjectile(b->getPosition(), targetTroop->getPosition(), [targetTroop, b](){
@@ -524,6 +623,13 @@ void BattleScene::checkWinCondition() {
 }
 
 void BattleScene::showResult(bool win) {
+    if (!_isReplay) {
+        _currentRecord.isWin = win;
+        _currentRecord.id = s_battleHistory.size() + 1;
+        _currentRecord.timestamp = "Battle " + std::to_string(_currentRecord.id);
+        s_battleHistory.push_back(_currentRecord);
+    }
+
     this->unscheduleUpdate();
     
     auto layer = LayerColor::create(Color4B(0, 0, 0, 150));

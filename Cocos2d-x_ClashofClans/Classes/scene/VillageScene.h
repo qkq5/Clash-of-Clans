@@ -34,15 +34,18 @@ private:
 
     // UI Callbacks
     void onAttackModeCallback(cocos2d::Ref* pSender);
+    void onHistoryCallback(cocos2d::Ref* pSender); // Added
     void onBuildModeCallback(cocos2d::Ref* pSender);
     void onCloseWindowCallback(cocos2d::Ref* pSender);
     void onLevelSelectCallback(cocos2d::Ref* pSender, int level); // 1=Simple, 2=Medium, 3=Hard
+    void onHistoryItemCallback(cocos2d::Ref* pSender, int index); // Added
     void onBuildingTypeSelected(cocos2d::Ref* pSender, building::BuildingType type);
     void onUpgradeCallback(cocos2d::Ref* pSender, building::Building* building);
     void onTrainSoldierCallback(cocos2d::Ref* pSender, building::TrainingCamp* camp, std::string soldierName);
 
     // Helpers
     void showLevelSelectWindow();
+    void showHistoryWindow(); // Added
     void showBuildWindow();
     void showBuildingInfo(building::Building* building);
     void showTrainingWindow(building::TrainingCamp* camp);

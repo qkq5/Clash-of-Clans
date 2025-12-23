@@ -180,8 +180,28 @@ void VillageScene::setupUI() {
         auto label = Label::createWithSystemFont("Attack", "Arial", 20);
         attackItem = MenuItemLabel::create(label, CC_CALLBACK_1(VillageScene::onAttackModeCallback, this));
     }
-    auto attackMenu = Menu::create(attackItem, nullptr);
-    attackMenu->setPosition(Vec2(origin.x + 50, origin.y + visibleSize.height - 50));
+    
+    // Return Button (Below Attack Mode)
+    MenuItem* returnItem = MenuItemImage::create("return_botton.png", "return_botton.png", [](Ref* sender){
+        Director::getInstance()->replaceScene(MainMenuScene::createScene());
+    });
+    if (returnItem == nullptr || returnItem->getContentSize().width == 0) {
+        auto label = Label::createWithSystemFont("Return", "Arial", 20);
+        returnItem = MenuItemLabel::create(label, [](Ref* sender){
+            Director::getInstance()->replaceScene(MainMenuScene::createScene());
+        });
+    }
+
+    // History Button
+    MenuItem* historyItem = MenuItemImage::create("history.png", "history.png", CC_CALLBACK_1(VillageScene::onHistoryCallback, this));
+    if (historyItem == nullptr || historyItem->getContentSize().width == 0) {
+        auto label = Label::createWithSystemFont("Battle History", "Arial", 20);
+        historyItem = MenuItemLabel::create(label, CC_CALLBACK_1(VillageScene::onHistoryCallback, this));
+    }
+    
+    auto attackMenu = Menu::create(attackItem, returnItem, historyItem, nullptr);
+    attackMenu->alignItemsVerticallyWithPadding(10);
+    attackMenu->setPosition(Vec2(origin.x + 50, origin.y + visibleSize.height - 100)); // Adjusted position to fit 3 buttons
     _uiLayer->addChild(attackMenu);
 
     // 2. Resources (Top Right)
@@ -318,6 +338,13 @@ void VillageScene::onAttackModeCallback(Ref* pSender) {
     showLevelSelectWindow();
 }
 
+void VillageScene::onHistoryCallback(Ref* pSender) {
+    if (_currentWindow) return;
+    showHistoryWindow();
+}
+
+
+
 void VillageScene::onBuildModeCallback(Ref* pSender) {
     if (_currentWindow) return;
     showBuildWindow();
@@ -353,9 +380,9 @@ void VillageScene::showLevelSelectWindow() {
     windowLayer->addChild(closeMenu);
     
     // Level Buttons
-    MenuItem* simpleItem = MenuItemImage::create("simple_mode.png", "simple_mode.png", [this](Ref*){ onLevelSelectCallback(nullptr, 1); });
-    MenuItem* mediumItem = MenuItemImage::create("medium_mode.png", "medium_mode.png", [this](Ref*){ onLevelSelectCallback(nullptr, 2); });
-    MenuItem* hardItem = MenuItemImage::create("hard_mode.png", "hard_mode.png", [this](Ref*){ onLevelSelectCallback(nullptr, 3); });
+    MenuItem* simpleItem = MenuItemImage::create("1_botton.png", "1_botton.png", [this](Ref*){ onLevelSelectCallback(nullptr, 1); });
+    MenuItem* mediumItem = MenuItemImage::create("2_botton.png", "2_botton.png", [this](Ref*){ onLevelSelectCallback(nullptr, 2); });
+    MenuItem* hardItem = MenuItemImage::create("3_botton.png", "3_botton.png", [this](Ref*){ onLevelSelectCallback(nullptr, 3); });
 
     // Fallbacks
     if (!simpleItem || simpleItem->getContentSize().width == 0) simpleItem = MenuItemLabel::create(Label::createWithSystemFont("Simple Mode", "Arial", 30), [this](Ref*){ onLevelSelectCallback(nullptr, 1); });
@@ -366,6 +393,55 @@ void VillageScene::showLevelSelectWindow() {
     menu->alignItemsVerticallyWithPadding(20);
     menu->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2));
     windowLayer->addChild(menu);
+}
+
+void VillageScene::showHistoryWindow() {
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto windowLayer = LayerColor::create(Color4B(0, 0, 0, 150));
+    this->addChild(windowLayer, 200);
+    _currentWindow = windowLayer;
+
+    // Close Button
+    MenuItem* closeItem = MenuItemImage::create("false.png", "false.png", CC_CALLBACK_1(VillageScene::onCloseWindowCallback, this));
+    if (!closeItem || closeItem->getContentSize().width == 0) {
+         auto label = Label::createWithSystemFont("X", "Arial", 20);
+         closeItem = MenuItemLabel::create(label, CC_CALLBACK_1(VillageScene::onCloseWindowCallback, this));
+    }
+    auto closeMenu = Menu::create(closeItem, nullptr);
+    closeMenu->setPosition(Vec2(visibleSize.width - 50, visibleSize.height - 50));
+    windowLayer->addChild(closeMenu);
+    
+    // History List
+    Vector<MenuItem*> items;
+    int index = 0;
+    for (const auto& record : BattleScene::s_battleHistory) {
+        std::string text = "Battle " + std::to_string(record.id) + " (Lvl " + std::to_string(record.level) + ") - " + (record.isWin ? "WIN" : "LOSE");
+        auto label = Label::createWithSystemFont(text, "Arial", 24);
+        auto item = MenuItemLabel::create(label, [this, index](Ref*){
+             onHistoryItemCallback(nullptr, index);
+        });
+        items.pushBack(item);
+        index++;
+    }
+    
+    if (items.empty()) {
+        auto label = Label::createWithSystemFont("No History Yet", "Arial", 30);
+        label->setPosition(visibleSize.width/2, visibleSize.height/2);
+        windowLayer->addChild(label);
+    } else {
+        auto menu = Menu::createWithArray(items);
+        menu->alignItemsVerticallyWithPadding(10);
+        menu->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2));
+        windowLayer->addChild(menu);
+    }
+}
+
+void VillageScene::onHistoryItemCallback(Ref* pSender, int index) {
+    if (index >= 0 && index < BattleScene::s_battleHistory.size()) {
+        auto scene = BattleScene::createReplayScene(BattleScene::s_battleHistory[index]);
+        Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
+        closeCurrentWindow();
+    }
 }
 
 void VillageScene::onLevelSelectCallback(Ref* pSender, int level) {
@@ -402,32 +478,43 @@ void VillageScene::showBuildWindow() {
         int currentCount = getBuildingCount(type);
         int maxCount = getMaxBuildingCount(type, getTownHallLevel());
         
+        MenuItem* item = nullptr;
+
         if (currentCount >= maxCount) {
-             // Greyed out or just show text "Max"
-             // For simplicity, let's just create it but it will fail on click? 
-             // Or better: Disabled item.
              auto sprite = Sprite::create(img);
              if (sprite) {
                  sprite->setColor(Color3B::GRAY);
-                 auto item = MenuItemSprite::create(sprite, sprite, nullptr);
-                 return item;
+                 item = MenuItemSprite::create(sprite, sprite, nullptr);
              }
-             return nullptr; 
+        } else {
+            item = MenuItemImage::create(img, img, [this, type, cost, isGold](Ref*){
+                if (isGold) {
+                    if (trySpendResources(cost, 0)) onBuildingTypeSelected(nullptr, type);
+                } else {
+                    if (trySpendResources(0, cost)) onBuildingTypeSelected(nullptr, type);
+                }
+            });
         }
-
-        auto item = MenuItemImage::create(img, img, [this, type, cost, isGold](Ref*){
-            if (isGold) {
-                if (trySpendResources(cost, 0)) onBuildingTypeSelected(nullptr, type);
-            } else {
-                if (trySpendResources(0, cost)) onBuildingTypeSelected(nullptr, type);
-            }
-        });
         
-        // Add cost label
         if (item) {
+             // Cost Label
              auto label = Label::createWithSystemFont(std::to_string(cost), "Arial", 16);
-             label->setPosition(Vec2(item->getContentSize().width/2, -10));
+             label->setPosition(Vec2(item->getContentSize().width/2 - 15, -15));
              item->addChild(label);
+
+             // Icon
+             auto icon = Sprite::create(isGold ? "coin.png" : "elixir.png");
+             if (icon) {
+                 icon->setScale(0.5f); 
+                 icon->setPosition(Vec2(item->getContentSize().width/2 + 15, -15));
+                 item->addChild(icon);
+             }
+
+             // Count Label
+             std::string countStr = std::to_string(currentCount) + "/" + std::to_string(maxCount);
+             auto countLabel = Label::createWithSystemFont(countStr, "Arial", 14);
+             countLabel->setPosition(Vec2(item->getContentSize().width/2, -35));
+             item->addChild(countLabel);
         }
         return item;
     };
@@ -451,18 +538,8 @@ void VillageScene::showBuildWindow() {
 
     // Layout
     auto menu = Menu::createWithArray(items);
-    menu->alignItemsHorizontallyWithPadding(20);
-    // Wrap if too many? For now just one row or grid. Grid is better.
-    // Re-align manually for grid
-    int col = 0; int row = 0;
-    for (auto item : items) {
-        item->setPosition(Vec2(visibleSize.width/2 - 200 + col * 100, visibleSize.height/2 + 100 - row * 120));
-        col++;
-        if (col > 4) { col = 0; row++; }
-    }
-    // Disable auto align if manual
-    // menu->alignItemsHorizontallyWithPadding(20); // Removed
-    menu->setPosition(Vec2::ZERO);
+    menu->alignItemsHorizontallyWithPadding(30);
+    menu->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2));
     
     windowLayer->addChild(menu);
 }
@@ -613,7 +690,7 @@ void VillageScene::showBuildingInfo(building::Building* building) {
     // Upgrade Button
     if (building->canUpgrade()) {
         int cost = building->getUpgradeCost();
-        // std::string costIcon = building->getUpgradeCurrencyIcon(); // Unused variable warning fix
+        std::string costIcon = building->getUpgradeCurrencyIcon(); 
         
         MenuItem* upgradeItem = MenuItemImage::create("upgrade.png", "upgrade.png", [this, building](Ref*){
             onUpgradeCallback(nullptr, building);
@@ -626,8 +703,16 @@ void VillageScene::showBuildingInfo(building::Building* building) {
         
         // Label for cost
         auto costLabel = Label::createWithSystemFont(std::to_string(cost), "Arial", 18);
-        costLabel->setPosition(Vec2(upgradeItem->getContentSize().width/2, -15));
+        costLabel->setPosition(Vec2(upgradeItem->getContentSize().width/2 - 15, -15));
         upgradeItem->addChild(costLabel);
+
+        // Icon for cost
+        auto icon = Sprite::create(costIcon);
+        if (icon) {
+            icon->setScale(0.5f);
+            icon->setPosition(Vec2(upgradeItem->getContentSize().width/2 + 15, -15));
+            upgradeItem->addChild(icon);
+        }
 
         menuItems.pushBack(upgradeItem);
     } else {
@@ -735,9 +820,17 @@ void VillageScene::showTrainingWindow(building::TrainingCamp* camp) {
 
         // Cost label
         auto label = Label::createWithSystemFont(std::to_string(cost), "Arial", 16);
-        label->setPosition(Vec2(item->getContentSize().width/2, -15));
+        label->setPosition(Vec2(item->getContentSize().width/2 - 15, -15));
         item->addChild(label);
         
+        // Icon for cost (Troops cost Elixir)
+        auto icon = Sprite::create("elixir.png");
+        if (icon) {
+            icon->setScale(0.5f);
+            icon->setPosition(Vec2(item->getContentSize().width/2 + 15, -15));
+            item->addChild(icon);
+        }
+
         // Count/Capacity Label
         std::string initCountStr = std::to_string(_troops[soldier]) + "/" + std::to_string(getTroopCapacity());
         countLabel->setString(initCountStr);

@@ -4,15 +4,41 @@
 #include "cocos2d.h"
 #include "../soldier/Soldier.h"
 #include "../building/Building.h"
+#include <vector>
+#include <string>
 
 namespace scene {
+
+struct DeploymentEvent {
+    float time;
+    int soldierType; // Cast from soldier::SoldierType
+    float x, y;
+};
+
+struct BattleRecord {
+    int id;
+    int level;
+    int initBarb;
+    int initArch;
+    int initBomb;
+    int initGiant;
+    std::vector<DeploymentEvent> events;
+    bool isWin;
+    std::string timestamp;
+};
 
 class BattleScene : public cocos2d::Scene {
 public:
     static cocos2d::Scene* createScene(int level, int barbarianCount, int archerCount, int bomberCount, int giantCount);
     static BattleScene* create(int level, int barbarianCount, int archerCount, int bomberCount, int giantCount);
     
+    // Replay
+    static cocos2d::Scene* createReplayScene(const BattleRecord& record);
+    static BattleScene* createReplay(const BattleRecord& record);
+    static std::vector<BattleRecord> s_battleHistory;
+
     virtual bool init(int level, int barbarianCount, int archerCount, int bomberCount, int giantCount);
+    virtual bool initReplay(const BattleRecord& record);
     
     void update(float dt) override;
 
@@ -62,6 +88,16 @@ private:
     
     // Projectiles
     void fireProjectile(cocos2d::Vec2 start, cocos2d::Vec2 end, std::function<void()> onHit);
+
+private:
+    // Replay / Recording
+    bool _isReplay;
+    BattleRecord _replayRecord; // The record being played back
+    int _replayEventIndex;
+    float _battleTimer;
+    
+    // Current recording
+    BattleRecord _currentRecord; 
 };
 
 } // namespace scene
