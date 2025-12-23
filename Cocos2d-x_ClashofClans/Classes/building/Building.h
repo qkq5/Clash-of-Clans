@@ -49,6 +49,9 @@ public:
     
     virtual void takeDamage(int damage);
     
+    void initHPBar();
+    void updateHPBar();
+
     // Factory method pattern could be useful here, but for now we'll use specific create methods in subclasses
 };
 

@@ -148,7 +148,7 @@ void BattleScene::setupLevel(int level) {
         b->setPosition(pos);
         _mapNode->addChild(b);
         _enemyBuildings.pushBack(b);
-        // Force texture update or init if needed, usually init called in create
+        b->initHPBar(); // Initialize HP Bar
     };
     
     // Level 1
