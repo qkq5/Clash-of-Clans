@@ -4,6 +4,7 @@
 #include "cocos2d.h"
 #include "../soldier/Soldier.h"
 #include "../building/Building.h"
+#include "../building/Landmine.h"
 #include <vector>
 #include <string>
 
@@ -41,6 +42,7 @@ public:
     virtual bool initReplay(const BattleRecord& record);
     
     void update(float dt) override;
+    void updateLandmines(float dt);
 
 private:
     int _level;
@@ -62,6 +64,7 @@ private:
     bool _isDeployMode;
     
     cocos2d::Vector<building::Building*> _enemyBuildings;
+    cocos2d::Vector<building::Landmine*> _landmines;
     cocos2d::Vector<soldier::Soldier*> _friendlyTroops;
     cocos2d::Vector<building::Building*> _projectiles; // Using Building? No, need Sprite or Node.
     cocos2d::Vector<cocos2d::Sprite*> _bulletSprites;

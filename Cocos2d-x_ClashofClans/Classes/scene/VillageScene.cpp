@@ -1,10 +1,17 @@
 #include "VillageScene.h"
 #include "MainMenuScene.h"
 #include "BattleScene.h"
+#include "building/TownHall.h"
+#include "building/GoldMine.h"
+#include "building/ElixirCollector.h"
+#include "building/GoldStorage.h"
+#include "building/ElixirStorage.h"
+#include "building/ArcherTower.h"
 #include "building/Cannon.h"
 #include "building/Barracks.h"
 #include "building/TrainingCamp.h"
 #include "building/Wall.h"
+#include "building/Landmine.h"
 #include <vector>
 
 USING_NS_CC;
@@ -576,6 +583,7 @@ int VillageScene::getMaxBuildingCount(building::BuildingType type, int thLevel) 
         case building::BuildingType::Cannon: return (thLevel >= 3) ? 3 : (thLevel >= 2 ? 2 : 1);
         case building::BuildingType::ArcherTower: return (thLevel >= 3) ? 2 : 1;
         case building::BuildingType::Wall: return (thLevel >= 3) ? 40 : (thLevel >= 2 ? 10 : 0);
+        case building::BuildingType::Landmine: return (thLevel >= 3) ? 12 : (thLevel >= 2 ? 8 : 4);
         default: return 0;
     }
 }
@@ -678,6 +686,10 @@ void VillageScene::showBuildingInfo(building::Building* building) {
         for (size_t i = 0; i < soldiers.size(); ++i) {
             infoStr += soldiers[i] + (i < soldiers.size() - 1 ? ", " : "");
         }
+    } else if (auto mine = dynamic_cast<building::Landmine*>(building)) {
+        infoStr += "\nDamage: 500";
+        infoStr += "\nRange: 3 Tiles";
+        infoStr += "\nTrigger: 2x2";
     }
 
     auto infoLabel = Label::createWithSystemFont(infoStr, "Arial", 24);

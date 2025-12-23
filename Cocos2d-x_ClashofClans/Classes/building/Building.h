@@ -16,7 +16,8 @@ enum class BuildingType {
     Cannon,
     Barracks,
     TrainingCamp,
-    Wall
+    Wall,
+    Landmine
 };
 
 class Building : public cocos2d::Sprite {

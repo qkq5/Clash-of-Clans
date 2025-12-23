@@ -7,6 +7,7 @@
 #include "../building/TrainingCamp.h"
 #include "../building/GoldStorage.h"
 #include "../building/ElixirStorage.h"
+#include "../building/Landmine.h"
 #include "MainMenuScene.h"
 #include <queue>
 #include <set>
@@ -52,24 +53,15 @@ bool BattleScene::init(int level, int barbarianCount, int archerCount, int bombe
         return false;
     }
     
-    _isReplay = false;
-    _battleTimer = 0;
-    
-    // Init current record
-    _currentRecord.level = level;
-    _currentRecord.initBarb = barbarianCount;
-    _currentRecord.initArch = archerCount;
-    _currentRecord.initBomb = bomberCount;
-    _currentRecord.initGiant = giantCount;
-    _currentRecord.events.clear();
-    
     _level = level;
     _barbarianCount = barbarianCount;
     _archerCount = archerCount;
     _bomberCount = bomberCount;
     _giantCount = giantCount;
+    
+    _battleTimer = 0;
+    _isReplay = false;
     _isDeployMode = false;
-    _selectedTroop = soldier::SoldierType::Barbarian; // Default
     
     // Background & Map
     _mapNode = cocos2d::Node::create();
@@ -177,6 +169,46 @@ void BattleScene::setupLevel(int level) {
         addB(building::Cannon::create(), center + Vec2(200, 200));
         addB(building::Cannon::create(), center + Vec2(-200, -200));
         addB(building::ArcherTower::create(), center + Vec2(200, -200));
+    }
+
+    // Landmines
+    _landmines.clear();
+    auto addMine = [&](Vec2 pos) {
+        auto m = building::Landmine::create();
+        m->setPosition(pos);
+        m->setVisible(false); // Invisible in Battle
+        _mapNode->addChild(m);
+        _landmines.pushBack(m);
+    };
+
+    int tileSize = 32;
+
+    // Simple (Level >= 1)
+    if (level >= 1) {
+        addMine(center + Vec2(0, 3 * tileSize));
+        addMine(center + Vec2(0, -3 * tileSize));
+        addMine(center + Vec2(3 * tileSize, 0));
+        addMine(center + Vec2(-3 * tileSize, 0));
+    }
+    
+    // Medium (Level >= 2)
+    if (level >= 2) {
+        // Outskirts 4 directions (Diagonals at 12 tiles)
+        int dist = 12 * tileSize;
+        addMine(center + Vec2(dist, dist));
+        addMine(center + Vec2(-dist, dist));
+        addMine(center + Vec2(dist, -dist));
+        addMine(center + Vec2(-dist, -dist));
+    }
+    
+    // Hard (Level >= 3)
+    if (level >= 3) {
+        // Outskirts 8 directions (Add Cardinals at 12 tiles)
+        int dist = 12 * tileSize;
+        addMine(center + Vec2(0, dist));
+        addMine(center + Vec2(0, -dist));
+        addMine(center + Vec2(dist, 0));
+        addMine(center + Vec2(-dist, 0));
     }
 
     initCollisionMap();
@@ -494,6 +526,7 @@ void BattleScene::update(float dt) {
     }
     
     // 2. Defense Logic
+    updateLandmines(dt);
     for (auto b : _enemyBuildings) {
         if (b->getCurrentHP() <= 0) {
             b->setVisible(false); // Die
@@ -877,6 +910,71 @@ std::vector<Vec2> BattleScene::findPath(Vec2 start, Vec2 end) {
     for (auto n : allNodes) delete n;
     
     return path;
+}
+
+void BattleScene::updateLandmines(float dt) {
+    for (auto it = _landmines.begin(); it != _landmines.end(); ) {
+        auto mine = *it;
+        if (!mine->getParent()) {
+            it = _landmines.erase(it);
+            continue;
+        }
+        
+        if (mine->isTriggered()) {
+            ++it;
+            continue;
+        }
+        
+        bool triggered = false;
+        // Trigger Range 2x2: approx distance check
+        // Center to Center distance. If tile is 32, 2x2 is 64x64.
+        // Radius approx 40-50 pixels.
+        for (auto s : _friendlyTroops) {
+            if (s->isDead()) continue;
+            if (s->getPosition().distance(mine->getPosition()) < 50.0f) {
+                triggered = true;
+                break;
+            }
+        }
+        
+        if (triggered) {
+            mine->startTriggerSequence([this, mine](){
+                Vec2 minePos = mine->getPosition();
+                float range = 3.0f * 32.0f;
+                int damage = 500;
+                
+                // Explosion Visual (Fallback)
+                auto node = DrawNode::create();
+                node->drawSolidCircle(Vec2::ZERO, range, 0, 20, Color4F(1, 0, 0, 0.5f));
+                node->setPosition(minePos);
+                _mapNode->addChild(node, 100);
+                node->runAction(Sequence::create(FadeOut::create(0.5f), RemoveSelf::create(), nullptr));
+                
+                // Damage and Pushback
+                for (auto s : _friendlyTroops) {
+                    if (s->isDead()) continue;
+                    float dist = s->getPosition().distance(minePos);
+                    if (dist <= range) {
+                        s->takeDamage(damage);
+                        
+                        // Pushback
+                        if (!s->isDead()) {
+                             Vec2 dir = (s->getPosition() - minePos).getNormalized();
+                             if (dir.isZero()) dir = Vec2(1,0);
+                             
+                             // Push to range + 20
+                             Vec2 newPos = minePos + dir * (range + 20.0f);
+                             
+                             auto push = MoveTo::create(0.1f, newPos);
+                             s->runAction(push);
+                        }
+                    }
+                }
+            });
+        }
+        
+        ++it;
+    }
 }
 
 } // namespace scene
