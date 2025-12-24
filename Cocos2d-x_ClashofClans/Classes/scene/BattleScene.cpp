@@ -60,6 +60,15 @@ bool BattleScene::init(int level, int barbarianCount, int archerCount, int bombe
     _bomberCount = bomberCount;
     _giantCount = giantCount;
     
+    // Initialize current record for recording
+    _currentRecord.level = level;
+    _currentRecord.initBarb = barbarianCount;
+    _currentRecord.initArch = archerCount;
+    _currentRecord.initBomb = bomberCount;
+    _currentRecord.initGiant = giantCount;
+    _currentRecord.events.clear();
+    _currentRecord.isWin = false;
+
     _battleTimer = 0;
     _isReplay = false;
     _isDeployMode = false;
@@ -130,11 +139,16 @@ bool BattleScene::initReplay(const BattleRecord& record) {
         putSoldierMenu->setVisible(false);
     }
     
-    // Add "REPLAY MODE" Label
-    auto label = Label::createWithSystemFont("REPLAY MODE", "Arial", 40);
-    label->setColor(Color3B::RED);
-    label->setPosition(Director::getInstance()->getVisibleSize().width/2, Director::getInstance()->getVisibleSize().height - 100);
-    this->addChild(label, 100);
+    // Add "Replay Mode" Sprite
+    auto replaySprite = Sprite::create("replay_mode.png");
+    if (replaySprite) {
+        Vec2 origin = Director::getInstance()->getVisibleOrigin();
+        Size visibleSize = Director::getInstance()->getVisibleSize();
+        
+        replaySprite->setAnchorPoint(Vec2(0, 1)); // Top-Left
+        replaySprite->setPosition(Vec2(origin.x + 20, origin.y + visibleSize.height - 20));
+        this->addChild(replaySprite, 100);
+    }
     
     return true;
 }
@@ -460,6 +474,55 @@ void BattleScene::update(float dt) {
                 break;
             }
         }
+        
+        // End replay check
+        if (_replayEventIndex >= _replayRecord.events.size()) {
+            // All events played, wait a bit then show result
+            // Check if all troops dead or won?
+            // Or just check if simulation settled.
+            // For now, let's trust the simulation to reach the same end state,
+            // but we need to trigger "End Replay" eventually.
+            // Let's just check win condition manually OR wait for no troops?
+            // Actually, we should just let the simulation run.
+            // But we need to know when to stop.
+            // Let's use the win/loss state from record? Or recalculate?
+            // If we recalculate, we can see if it diverges.
+            // But the user said "Directly shows victory". 
+            // That was because checkWinCondition() was running immediately on init because no troops were spawned yet!
+            
+            // Now that checkWinCondition() is skipped for replay, we need a way to end it.
+            // Let's check win condition ONLY if some time has passed or events finished.
+            
+            bool anyTroopAlive = false;
+            for (auto s : _friendlyTroops) {
+                if (!s->isDead()) {
+                    anyTroopAlive = true;
+                    break;
+                }
+            }
+            
+            // If all events done AND (no troops left OR win), then show result.
+            // Or simply, if we want to mimic the exact end time, we should record end time.
+            // Without end time, we wait until no action.
+            
+            // Simple approach: Allow standard checkWinCondition to run AFTER all events are spawned.
+            if (_replayEventIndex >= _replayRecord.events.size()) {
+                 // Re-enable win check logic locally
+                 bool enemyTHAlive = false;
+                 for (auto b : _enemyBuildings) {
+                     if (dynamic_cast<building::TownHall*>(b) && b->getCurrentHP() > 0) {
+                         enemyTHAlive = true;
+                         break;
+                     }
+                 }
+                 if (!enemyTHAlive) {
+                     showResult(true);
+                 } else if (!anyTroopAlive) {
+                      // Only if all troops died
+                      showResult(false);
+                 }
+            }
+        }
     }
 
     // 1. Troops Logic
@@ -667,6 +730,8 @@ void BattleScene::fireProjectile(Vec2 start, Vec2 end, std::function<void()> onH
 }
 
 void BattleScene::checkWinCondition() {
+    if (_isReplay) return; // Replay controls its own ending or follows events, don't auto-check logic
+
     bool enemyTHAlive = false;
     bool anyEnemyAlive = false;
     for (auto b : _enemyBuildings) {
