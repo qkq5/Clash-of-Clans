@@ -257,7 +257,7 @@ void BattleScene::setupUI() {
         });
     }
     auto surrenderMenu = Menu::create(surrenderItem, nullptr);
-    surrenderMenu->setPosition(Vec2(visibleSize.width - 50, 50));
+    surrenderMenu->setPosition(Vec2(visibleSize.width - 100, 50)); // Moved 50px left (from -50 to -100)
     surrenderMenu->setTag(999); // Tag for finding it later
     this->addChild(surrenderMenu, 20);
 

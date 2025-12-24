@@ -10,6 +10,50 @@ Scene* MainMenuScene::createScene() {
     return MainMenuScene::create();
 }
 
+
+
+// Helper to create a MenuItemSprite with cropped texture to remove transparent borders
+static MenuItemSprite* createTrimmedButton(const std::string& normalImage, const std::string& selectedImage, const ccMenuCallback& callback) {
+    auto image = new Image();
+    if (!image->initWithImageFile(normalImage)) {
+        delete image;
+        return MenuItemImage::create(normalImage, selectedImage, callback);
+    }
+    
+    int w = image->getWidth();
+    int h = image->getHeight();
+    unsigned char* data = image->getData();
+    
+    int minX = w, maxX = 0, minY = h, maxY = 0;
+    bool found = false;
+    
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            if (data[(y * w + x) * 4 + 3] > 0) {
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+                found = true;
+            }
+        }
+    }
+    image->release();
+    
+    if (found) {
+        float cropW = maxX - minX + 1;
+        float cropH = maxY - minY + 1;
+        Rect rect(minX, minY, cropW, cropH);
+        
+        auto normalSprite = Sprite::create(normalImage, rect);
+        auto selectedSprite = Sprite::create(selectedImage, rect);
+        
+        return MenuItemSprite::create(normalSprite, selectedSprite, callback);
+    }
+    
+    return MenuItemImage::create(normalImage, selectedImage, callback);
+}
+
 // Print useful error message instead of segfaulting when files are not there.
 static void problemLoading(const char* filename) {
     printf("Error while loading: %s\n", filename);
@@ -65,12 +109,12 @@ bool MainMenuScene::init() {
     // 4. Add Buttons
     
     // Start Game Button
-    MenuItem* startItem = MenuItemImage::create(
+    MenuItem* startItem = createTrimmedButton(
                                            "begin_botton.png",
                                            "begin_botton.png",
                                            CC_CALLBACK_1(MainMenuScene::onStartGameCallback, this));
 
-    if (startItem == nullptr || startItem->getContentSize().width == 0) {
+    if (startItem == nullptr) {
         problemLoading("begin_botton.png");
         // Fallback to text button
         auto label = Label::createWithSystemFont("Start Game", "Arial", 24);
@@ -78,12 +122,12 @@ bool MainMenuScene::init() {
     }
 
     // Exit Game Button
-    MenuItem* exitItem = MenuItemImage::create(
+    MenuItem* exitItem = createTrimmedButton(
                                           "exit_botton.png",
                                           "exit_botton.png",
                                           CC_CALLBACK_1(MainMenuScene::onExitGameCallback, this));
     
-    if (exitItem == nullptr || exitItem->getContentSize().width == 0) {
+    if (exitItem == nullptr) {
         problemLoading("exit_botton.png");
         // Fallback to text button
         auto label = Label::createWithSystemFont("Exit Game", "Arial", 24);

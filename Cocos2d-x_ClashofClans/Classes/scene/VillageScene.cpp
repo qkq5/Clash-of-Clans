@@ -197,16 +197,23 @@ void VillageScene::setupUI() {
         attackItem = MenuItemLabel::create(label, CC_CALLBACK_1(VillageScene::onAttackModeCallback, this));
     }
     
-    // Return Button (Below Attack Mode)
+    // Return Button (Bottom Left)
     MenuItem* returnItem = MenuItemImage::create("return_botton.png", "return_botton.png", [](Ref* sender){
+        CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("botton.mp3");
         Director::getInstance()->replaceScene(MainMenuScene::createScene());
     });
     if (returnItem == nullptr || returnItem->getContentSize().width == 0) {
         auto label = Label::createWithSystemFont("Return", "Arial", 20);
         returnItem = MenuItemLabel::create(label, [](Ref* sender){
+            CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("botton.mp3");
             Director::getInstance()->replaceScene(MainMenuScene::createScene());
         });
     }
+
+    // Place Return Button at Bottom Left
+    auto returnMenu = Menu::create(returnItem, nullptr);
+    returnMenu->setPosition(Vec2(origin.x + 50, origin.y + 50));
+    _uiLayer->addChild(returnMenu);
 
     // History Button
     MenuItem* historyItem = MenuItemImage::create("history.png", "history.png", CC_CALLBACK_1(VillageScene::onHistoryCallback, this));
@@ -215,9 +222,10 @@ void VillageScene::setupUI() {
         historyItem = MenuItemLabel::create(label, CC_CALLBACK_1(VillageScene::onHistoryCallback, this));
     }
     
-    auto attackMenu = Menu::create(attackItem, returnItem, historyItem, nullptr);
+    // Attack Mode Button (Top Left) and History
+    auto attackMenu = Menu::create(attackItem, historyItem, nullptr);
     attackMenu->alignItemsVerticallyWithPadding(10);
-    attackMenu->setPosition(Vec2(origin.x + 50, origin.y + visibleSize.height - 100)); // Adjusted position to fit 3 buttons
+    attackMenu->setPosition(Vec2(origin.x + 50, origin.y + visibleSize.height - 100)); // Adjusted position
     _uiLayer->addChild(attackMenu);
 
     // 2. Resources (Top Right)
