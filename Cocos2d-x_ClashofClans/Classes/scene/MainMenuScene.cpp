@@ -1,6 +1,5 @@
 #include "MainMenuScene.h"
 #include "SimpleAudioEngine.h"
-
 #include "VillageScene.h"
 
 USING_NS_CC;
@@ -22,6 +21,11 @@ bool MainMenuScene::init() {
     // 1. super init first
     if (!Scene::init()) {
         return false;
+    }
+
+    // Play Background Music
+    if (!CocosDenshion::SimpleAudioEngine::getInstance()->isBackgroundMusicPlaying()) {
+        CocosDenshion::SimpleAudioEngine::getInstance()->playBackgroundMusic("home_music.mp3", true);
     }
 
     auto visibleSize = Director::getInstance()->getVisibleSize();

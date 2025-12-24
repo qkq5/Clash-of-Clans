@@ -21,6 +21,7 @@ class VillageScene : public cocos2d::Scene {
 public:
     static cocos2d::Scene* createScene();
     virtual bool init() override;
+    virtual void onEnter() override;
     virtual void update(float dt) override; // Added update loop
     
     // Implement the "static create()" method manually

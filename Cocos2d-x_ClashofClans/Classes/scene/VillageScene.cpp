@@ -1,6 +1,7 @@
 #include "VillageScene.h"
 #include "MainMenuScene.h"
 #include "BattleScene.h"
+#include "SimpleAudioEngine.h"
 #include "building/TownHall.h"
 #include "building/GoldMine.h"
 #include "building/ElixirCollector.h"
@@ -42,6 +43,14 @@ bool VillageScene::init() {
     this->scheduleUpdate(); // Enable update loop for resources
 
     return true;
+}
+
+void VillageScene::onEnter() {
+    Scene::onEnter();
+    // Play Background Music if not already playing
+    if (!CocosDenshion::SimpleAudioEngine::getInstance()->isBackgroundMusicPlaying()) {
+        CocosDenshion::SimpleAudioEngine::getInstance()->playBackgroundMusic("home_music.mp3", true);
+    }
 }
 
 void VillageScene::update(float dt) {
@@ -444,14 +453,17 @@ void VillageScene::showHistoryWindow() {
 }
 
 void VillageScene::onHistoryItemCallback(Ref* pSender, int index) {
+    CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("botton.mp3");
     if (index >= 0 && index < BattleScene::s_battleHistory.size()) {
         auto scene = BattleScene::createReplayScene(BattleScene::s_battleHistory[index]);
+        CocosDenshion::SimpleAudioEngine::getInstance()->stopBackgroundMusic(); // Stop home music
         Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
         closeCurrentWindow();
     }
 }
 
 void VillageScene::onLevelSelectCallback(Ref* pSender, int level) {
+    CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("botton.mp3");
     int barb = 0, arch = 0, bomb = 0, giant = 0;
     if (_troops.find("Barbarian") != _troops.end()) barb = _troops["Barbarian"];
     if (_troops.find("Archer") != _troops.end()) arch = _troops["Archer"];
@@ -459,6 +471,7 @@ void VillageScene::onLevelSelectCallback(Ref* pSender, int level) {
     if (_troops.find("Giant") != _troops.end()) giant = _troops["Giant"];
     
     auto scene = BattleScene::createScene(level, barb, arch, bomb, giant);
+    CocosDenshion::SimpleAudioEngine::getInstance()->stopBackgroundMusic(); // Stop home music
     Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
     closeCurrentWindow();
 }

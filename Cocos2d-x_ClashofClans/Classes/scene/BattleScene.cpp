@@ -1,5 +1,6 @@
 #include "BattleScene.h"
 #include "VillageScene.h"
+#include "SimpleAudioEngine.h"
 #include "../building/TownHall.h"
 #include "../building/Cannon.h"
 #include "../building/ArcherTower.h"
@@ -99,6 +100,9 @@ bool BattleScene::init(int level, int barbarianCount, int archerCount, int bombe
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
     
     this->scheduleUpdate();
+
+    // Play Battle Music
+    CocosDenshion::SimpleAudioEngine::getInstance()->playBackgroundMusic("combat_music.mp3", true);
     
     return true;
 }
@@ -219,6 +223,7 @@ void BattleScene::setupUI() {
     
     // 1. Put Soldier Button (Bottom Left)
     MenuItem* putBtn = MenuItemImage::create("put_soldier.png", "put_soldier.png", [&](Ref*){
+        CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("botton.mp3");
         if (_troopSelectionNode) {
             _troopSelectionNode->setVisible(!_troopSelectionNode->isVisible());
         }
@@ -242,6 +247,7 @@ void BattleScene::setupUI() {
 
     // Surrender Button (Bottom Right)
     MenuItem* surrenderItem = MenuItemImage::create("surrend_botton.png", "surrend_botton.png", [this](Ref*){
+        CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("botton.mp3");
         showResult(false);
     });
     if (!surrenderItem || surrenderItem->getContentSize().width == 0) {
@@ -269,6 +275,7 @@ void BattleScene::setupUI() {
     
     // Barbarian: barbarian1.png
     auto barbItem = MenuItemImage::create("barbarian1.png", "barbarian1.png", [&](Ref*){
+        CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("botton.mp3");
         _selectedTroop = soldier::SoldierType::Barbarian;
         _isDeployMode = true;
         if (_debugLabel) _debugLabel->setString("Selected: Barbarian");
@@ -327,6 +334,7 @@ void BattleScene::setupUI() {
     
     // Giant: giant.png
     auto giantItem = MenuItemImage::create("giant.png", "giant.png", [&](Ref*){
+        CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("botton.mp3");
         _selectedTroop = soldier::SoldierType::Giant;
         _isDeployMode = true;
         if (_debugLabel) _debugLabel->setString("Selected: Giant");
@@ -493,14 +501,23 @@ void BattleScene::update(float dt) {
                          auto move = MoveBy::create(0.1f, (target->getPosition() - s->getPosition()).getNormalized() * 10);
                          s->runAction(Sequence::create(move, move->reverse(), nullptr));
                          target->takeDamage(s->getAttackDamage());
+
+                         if (s->getType() == soldier::SoldierType::Barbarian) {
+                             CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("barbarian_attacksound.mp3");
+                         } else {
+                             CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("giant_attacksound.mp3");
+                         }
                     } else if (s->getType() == soldier::SoldierType::Archer) {
                          // Ranged: Projectile
+                         CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("archery.mp3");
                          fireProjectile(s->getPosition(), target->getPosition(), [target, s](){
                              if (target) target->takeDamage(s->getAttackDamage());
                          });
                     } else if (s->getType() == soldier::SoldierType::Bomber) {
                          // Bomber: Projectile + AOE
                          fireProjectile(s->getPosition(), target->getPosition(), [target, s, this](){
+                             // Explosion Sound
+                             CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("boom.mp3");
                              // AOE Logic
                              Vec2 hitPos = target->getPosition();
                              // Deal damage to target and nearby
@@ -707,6 +724,7 @@ void BattleScene::showResult(bool win) {
     }
     
     auto btn = MenuItemImage::create("end_botton.png", "end_botton.png", [&](Ref*){
+        CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("botton.mp3");
         returnToVillage();
     });
     auto menu = Menu::create(btn, nullptr);
@@ -939,6 +957,7 @@ void BattleScene::updateLandmines(float dt) {
         
         if (triggered) {
             mine->startTriggerSequence([this, mine](){
+                CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("boom.mp3");
                 Vec2 minePos = mine->getPosition();
                 float range = 3.0f * 32.0f;
                 int damage = 500;
