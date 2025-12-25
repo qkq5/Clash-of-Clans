@@ -68,9 +68,7 @@ bool MainMenuScene::init() {
     }
 
     // Play Background Music
-    if (!CocosDenshion::SimpleAudioEngine::getInstance()->isBackgroundMusicPlaying()) {
-        CocosDenshion::SimpleAudioEngine::getInstance()->playBackgroundMusic("home_music.mp3", true);
-    }
+    CocosDenshion::SimpleAudioEngine::getInstance()->playBackgroundMusic("menu.mp3", true);
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();

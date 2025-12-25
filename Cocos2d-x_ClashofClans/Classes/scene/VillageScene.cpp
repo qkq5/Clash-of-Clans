@@ -47,10 +47,8 @@ bool VillageScene::init() {
 
 void VillageScene::onEnter() {
     Scene::onEnter();
-    // Play Background Music if not already playing
-    if (!CocosDenshion::SimpleAudioEngine::getInstance()->isBackgroundMusicPlaying()) {
-        CocosDenshion::SimpleAudioEngine::getInstance()->playBackgroundMusic("home_music.mp3", true);
-    }
+    // Always switch to village music
+    CocosDenshion::SimpleAudioEngine::getInstance()->playBackgroundMusic("home_music.mp3", true);
 }
 
 void VillageScene::update(float dt) {
