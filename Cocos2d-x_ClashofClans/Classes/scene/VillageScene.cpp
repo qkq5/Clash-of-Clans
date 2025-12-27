@@ -306,8 +306,13 @@ void VillageScene::setupTouchHandling() {
 
             if (_isBuildMode) {
                 // Try to place building
+                size_t before = _buildings.size();
                 placeBuilding(_pendingBuildingType, Vec2(gridX, gridY));
-                _isBuildMode = false; // Exit build mode after one placement
+                if (_buildings.size() > before) {
+                    _isBuildMode = false; // Exit build mode only if placement succeeded
+                } else {
+                    // Keep build mode if placement failed
+                }
             } else {
                 // Check if clicked on a building
                 for (auto building : _buildings) {
@@ -347,8 +352,41 @@ void VillageScene::placeBuilding(building::BuildingType type, const cocos2d::Vec
     }
 
     if (building) {
+        // Intended world position for center of tile
+        Vec2 worldPos = Vec2(gridPos.x * 32 + 16, gridPos.y * 32 + 16);
+        
+        // Compute intended bounding rect (in _mapNode space)
+        cocos2d::Size cs = building->getContentSize();
+        float w = cs.width * building->getScaleX();
+        float h = cs.height * building->getScaleY();
+        cocos2d::Rect intendedRect(worldPos.x - w / 2.0f, worldPos.y - h / 2.0f, w, h);
+
+        // Check overlap with existing buildings' bounding boxes
+        bool overlaps = false;
+        for (auto existing : _buildings) {
+            cocos2d::Rect existingRect = existing->getBoundingBox(); // In _mapNode space
+            if (intendedRect.intersectsRect(existingRect)) {
+                overlaps = true;
+                break;
+            }
+        }
+
+        if (overlaps) {
+            // Show error near the intended position (convert to scene/UI coordinates)
+            Vec2 scenePos = _mapNode->getPosition() + worldPos;
+            auto err = cocos2d::Label::createWithSystemFont("无法放置", "Arial", 24);
+            err->setColor(cocos2d::Color3B::RED);
+            err->setPosition(scenePos);
+            _uiLayer->addChild(err, 300);
+            err->runAction(cocos2d::Sequence::create(cocos2d::DelayTime::create(0.5f),
+                                                     cocos2d::FadeOut::create(0.5f),
+                                                     cocos2d::RemoveSelf::create(),
+                                                     nullptr));
+            return;
+        }
+
         building->setGridPosition(gridPos);
-        building->setPosition(Vec2(gridPos.x * 32 + 16, gridPos.y * 32 + 16));
+        building->setPosition(worldPos);
         _mapNode->addChild(building, 10);
         _buildings.push_back(building);
     }

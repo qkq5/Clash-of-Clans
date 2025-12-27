@@ -405,17 +405,49 @@ void BattleScene::onTouchMoved(Touch* touch, Event* event) {
     _mapNode->setPosition(_mapNode->getPosition() + delta);
 }
 
-void BattleScene::onTouchEnded(Touch* touch, Event* event) {
-    if (touch->getStartLocation().distance(touch->getLocation()) < 10.0f) {
-        // Tap
-        if (_isDeployMode) {
-            Vec2 loc = touch->getLocation();
-            if (loc.y < 100) return;
-            Vec2 nodePos = _mapNode->convertToNodeSpace(loc);
-            spawnTroop(nodePos);
+    void BattleScene::onTouchEnded(Touch* touch, Event* event) {
+        if (touch->getStartLocation().distance(touch->getLocation()) < 10.0f) {
+            // Tap
+            if (_isDeployMode) {
+                Vec2 loc = touch->getLocation();
+                if (loc.y < 100) return;
+                Vec2 nodePos = _mapNode->convertToNodeSpace(loc);
+                
+                // Validate deploy position: must be OUTSIDE the envelope of enemy buildings
+                float minX = std::numeric_limits<float>::max();
+                float minY = std::numeric_limits<float>::max();
+                float maxX = std::numeric_limits<float>::lowest();
+                float maxY = std::numeric_limits<float>::lowest();
+                for (auto b : _enemyBuildings) {
+                    Rect r = b->getBoundingBox();
+                    minX = std::min(minX, r.getMinX());
+                    minY = std::min(minY, r.getMinY());
+                    maxX = std::max(maxX, r.getMaxX());
+                    maxY = std::max(maxY, r.getMaxY());
+                }
+                
+                bool isLegal = true;
+                if (!_enemyBuildings.empty()) {
+                    float margin = 64.0f; // Reasonable margin outside the village envelope
+                    Rect envelope(minX - margin, minY - margin, (maxX - minX) + margin * 2, (maxY - minY) + margin * 2);
+                    if (envelope.containsPoint(nodePos)) {
+                        isLegal = false;
+                    }
+                }
+                
+                if (!isLegal) {
+                    auto err = Label::createWithSystemFont("无法在村庄内部放置", "Arial", 28);
+                    err->setColor(Color3B::RED);
+                    err->setPosition(loc);
+                    this->addChild(err, 200);
+                    err->runAction(Sequence::create(DelayTime::create(0.5f), FadeOut::create(0.5f), RemoveSelf::create(), nullptr));
+                    return;
+                }
+                
+                spawnTroop(nodePos);
+            }
         }
     }
-}
 
 void BattleScene::spawnTroop(Vec2 pos) {
     int* count = nullptr;
@@ -777,7 +809,7 @@ void BattleScene::showResult(bool win) {
     
     Size visibleSize = Director::getInstance()->getVisibleSize();
     
-    auto img = Sprite::create(win ? "victory.png" : "failure.png");
+    auto img = Sprite::create(win ? "victory.png" : "lose.png");
     if (img) {
         img->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2 + 50));
         layer->addChild(img);
