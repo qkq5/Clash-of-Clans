@@ -412,9 +412,37 @@ void VillageScene::showLevelSelectWindow() {
     if (!hardItem || hardItem->getContentSize().width == 0) hardItem = MenuItemLabel::create(Label::createWithSystemFont("Hard Mode", "Arial", 30), [this](Ref*){ onLevelSelectCallback(nullptr, 3); });
 
     auto menu = Menu::create(simpleItem, mediumItem, hardItem, nullptr);
-    menu->alignItemsVerticallyWithPadding(20);
+    menu->alignItemsHorizontallyWithPadding(50);
     menu->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2));
     windowLayer->addChild(menu);
+
+    // Calculate total wins
+    int totalWins = 0;
+    for (const auto& record : BattleScene::s_battleHistory) {
+        if (record.isWin) {
+            totalWins++;
+        }
+    }
+
+    // Victory Icon
+    auto victoryIcon = Sprite::create("victory.png");
+    if (victoryIcon) {
+        // Position below the menu (Lowered by another 50px, so -150)
+        // Shifted right by 30px: (width/2 - 30) + 30 = width/2
+        victoryIcon->setPosition(Vec2(visibleSize.width/2, visibleSize.height/2 - 150));
+        victoryIcon->setScale(0.5f); // Scale down if too big
+        windowLayer->addChild(victoryIcon);
+    }
+
+    // Win Count Label
+    auto winLabel = Label::createWithSystemFont(std::to_string(totalWins), "Arial", 30);
+    winLabel->setAnchorPoint(Vec2(0, 0.5f)); // Left aligned
+    if (victoryIcon) {
+        winLabel->setPosition(victoryIcon->getPosition() + Vec2(victoryIcon->getContentSize().width * 0.5f * 0.5f + 10, 0));
+    } else {
+        winLabel->setPosition(Vec2(visibleSize.width/2 + 30, visibleSize.height/2 - 150));
+    }
+    windowLayer->addChild(winLabel);
 }
 
 void VillageScene::showHistoryWindow() {
