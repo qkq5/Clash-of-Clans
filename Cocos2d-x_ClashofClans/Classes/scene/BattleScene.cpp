@@ -414,20 +414,26 @@ void BattleScene::onTouchMoved(Touch* touch, Event* event) {
                 Vec2 nodePos = _mapNode->convertToNodeSpace(loc);
                 
                 // Validate deploy position: must be OUTSIDE the envelope of enemy buildings
-                float minX = std::numeric_limits<float>::max();
-                float minY = std::numeric_limits<float>::max();
-                float maxX = std::numeric_limits<float>::lowest();
-                float maxY = std::numeric_limits<float>::lowest();
+                float minX = 0, minY = 0, maxX = 0, maxY = 0;
+                bool hasBounds = false;
                 for (auto b : _enemyBuildings) {
                     Rect r = b->getBoundingBox();
-                    minX = std::min(minX, r.getMinX());
-                    minY = std::min(minY, r.getMinY());
-                    maxX = std::max(maxX, r.getMaxX());
-                    maxY = std::max(maxY, r.getMaxY());
+                    if (!hasBounds) {
+                        minX = r.getMinX();
+                        minY = r.getMinY();
+                        maxX = r.getMaxX();
+                        maxY = r.getMaxY();
+                        hasBounds = true;
+                    } else {
+                        if (r.getMinX() < minX) minX = r.getMinX();
+                        if (r.getMinY() < minY) minY = r.getMinY();
+                        if (r.getMaxX() > maxX) maxX = r.getMaxX();
+                        if (r.getMaxY() > maxY) maxY = r.getMaxY();
+                    }
                 }
                 
                 bool isLegal = true;
-                if (!_enemyBuildings.empty()) {
+                if (hasBounds) {
                     float margin = 64.0f; // Reasonable margin outside the village envelope
                     Rect envelope(minX - margin, minY - margin, (maxX - minX) + margin * 2, (maxY - minY) + margin * 2);
                     if (envelope.containsPoint(nodePos)) {
@@ -436,7 +442,7 @@ void BattleScene::onTouchMoved(Touch* touch, Event* event) {
                 }
                 
                 if (!isLegal) {
-                    auto err = Label::createWithSystemFont("无法在村庄内部放置", "Arial", 28);
+                    auto err = cocos2d::Label::createWithSystemFont("Invalid placement", "Arial", 28);
                     err->setColor(Color3B::RED);
                     err->setPosition(loc);
                     this->addChild(err, 200);
@@ -484,7 +490,7 @@ void BattleScene::spawnTroop(Vec2 pos) {
 
     } else {
         // Show error
-        auto err = Label::createWithSystemFont("Not enough troops!", "Arial", 30);
+        auto err = cocos2d::Label::createWithSystemFont("Not enough troops!", "Arial", 30);
         err->setColor(Color3B::RED);
         err->setPosition(Director::getInstance()->getVisibleSize() / 2);
         this->addChild(err, 100);
