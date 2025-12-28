@@ -230,6 +230,45 @@ void BattleScene::setupLevel(int level) {
     }
 
     initCollisionMap();
+
+    // Visualize Invalid Deployment Zone (Red Envelope)
+    if (!_enemyBuildings.empty()) {
+        float minX = 0, minY = 0, maxX = 0, maxY = 0;
+        bool hasBounds = false;
+
+        for (auto b : _enemyBuildings) {
+            Rect r = b->getBoundingBox();
+            if (!hasBounds) {
+                minX = r.getMinX();
+                minY = r.getMinY();
+                maxX = r.getMaxX();
+                maxY = r.getMaxY();
+                hasBounds = true;
+            } else {
+                if (r.getMinX() < minX) minX = r.getMinX();
+                if (r.getMinY() < minY) minY = r.getMinY();
+                if (r.getMaxX() > maxX) maxX = r.getMaxX();
+                if (r.getMaxY() > maxY) maxY = r.getMaxY();
+            }
+        }
+
+        if (hasBounds) {
+            float margin = 64.0f;
+            Vec2 bl(minX - margin, minY - margin);
+            Vec2 tr(maxX + margin, maxY + margin);
+            
+            auto drawNode = DrawNode::create();
+            // Draw red rectangle frame
+            Vec2 points[4] = {
+                Vec2(bl.x, bl.y),
+                Vec2(tr.x, bl.y),
+                Vec2(tr.x, tr.y),
+                Vec2(bl.x, tr.y)
+            };
+            drawNode->drawPolygon(points, 4, Color4F(0, 0, 0, 0), 0.7f, Color4F::RED); // Transparent fill, Red border, thickness 0.7
+            _mapNode->addChild(drawNode, 1000); // High Z-order to be visible
+        }
+    }
 }
 
 void BattleScene::setupUI() {
