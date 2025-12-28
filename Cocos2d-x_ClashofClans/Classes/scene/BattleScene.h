@@ -12,7 +12,7 @@ namespace scene {
 
 struct DeploymentEvent {
     float time;
-    int soldierType; // Cast from soldier::SoldierType
+    int soldierType; 
     float x, y;
 };
 
@@ -66,13 +66,13 @@ private:
     cocos2d::Vector<building::Building*> _enemyBuildings;
     cocos2d::Vector<building::Landmine*> _landmines;
     cocos2d::Vector<soldier::Soldier*> _friendlyTroops;
-    cocos2d::Vector<building::Building*> _projectiles; // Using Building? No, need Sprite or Node.
+    cocos2d::Vector<building::Building*> _projectiles; 
     cocos2d::Vector<cocos2d::Sprite*> _bulletSprites;
 
     cocos2d::Node* _mapNode; 
     
     void setupLevel(int level);
-    void setupUI();
+    void setupUI(); 
     void updateTotalTroopsUI();
     
     // Input
@@ -86,7 +86,7 @@ private:
     void showResult(bool win);
     void returnToVillage();
     
-    // AI
+    //AI
     building::Building* findTargetForSoldier(soldier::Soldier* s);
     
     // Projectiles
@@ -113,7 +113,6 @@ private:
     int _mapHeight = 50;
 
 private:
-    // Replay / Recording
     bool _isReplay;
     BattleRecord _replayRecord; // The record being played back
     int _replayEventIndex;

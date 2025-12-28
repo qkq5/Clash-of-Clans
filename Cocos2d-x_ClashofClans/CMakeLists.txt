@@ -25,7 +25,7 @@
 
 cmake_minimum_required(VERSION 3.6)
 
-set(APP_NAME Cocos2d-x_ClashofClans)
+set(APP_NAME MyGame)
 
 project(${APP_NAME})
 
@@ -49,11 +49,43 @@ endif()
 # add cross-platforms source files and header files 
 list(APPEND GAME_SOURCE
      Classes/AppDelegate.cpp
-     Classes/HelloWorldScene.cpp
+     Classes/scene/MainMenuScene.cpp
+     Classes/scene/VillageScene.cpp
+     Classes/building/Building.cpp
+     Classes/building/TownHall.cpp
+     Classes/building/GoldMine.cpp
+     Classes/building/ElixirCollector.cpp
+     Classes/building/GoldStorage.cpp
+     Classes/building/ElixirStorage.cpp
+     Classes/building/ArcherTower.cpp
+     Classes/building/Cannon.cpp
+     Classes/building/Barracks.cpp
+     Classes/building/TrainingCamp.cpp
+     Classes/building/Wall.cpp
+     Classes/building/Landmine.cpp
+     Classes/soldier/Soldier.cpp
+     Classes/scene/BattleScene.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
-     Classes/HelloWorldScene.h
+     Classes/scene/MainMenuScene.h
+     Classes/scene/VillageScene.h
+     Classes/core/GameException.h
+     Classes/core/Grid.h
+     Classes/building/Building.h
+     Classes/building/TownHall.h
+     Classes/building/GoldMine.h
+     Classes/building/ElixirCollector.h
+     Classes/building/GoldStorage.h
+     Classes/building/ElixirStorage.h
+     Classes/building/ArcherTower.h
+     Classes/building/Cannon.h
+     Classes/building/Barracks.h
+     Classes/building/TrainingCamp.h
+     Classes/building/Wall.h
+     Classes/building/Landmine.h
+     Classes/soldier/Soldier.h
+     Classes/scene/BattleScene.h
      )
 
 if(ANDROID)

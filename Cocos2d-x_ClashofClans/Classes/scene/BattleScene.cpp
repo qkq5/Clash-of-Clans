@@ -117,7 +117,6 @@ bool BattleScene::init(int level, int barbarianCount, int archerCount, int bombe
 }
 
 bool BattleScene::initReplay(const BattleRecord& record) {
-    // Reuse normal init with record params
     if (!this->init(record.level, record.initBarb, record.initArch, record.initBomb, record.initGiant)) return false;
     
     _isReplay = true;
@@ -139,7 +138,6 @@ bool BattleScene::initReplay(const BattleRecord& record) {
         putSoldierMenu->setVisible(false);
     }
     
-    // Add "Replay Mode" Sprite
     auto replaySprite = Sprite::create("replay_mode.png");
     if (replaySprite) {
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
@@ -154,15 +152,15 @@ bool BattleScene::initReplay(const BattleRecord& record) {
 }
 
 void BattleScene::setupLevel(int level) {
-    // Center of the MAP (50x50 * 32)
+
     Vec2 center = Vec2(50 * 32 / 2, 50 * 32 / 2);
     
-    // Helper to add building
+    //add building
     auto addB = [&](building::Building* b, Vec2 pos) {
         b->setPosition(pos);
         _mapNode->addChild(b);
         _enemyBuildings.pushBack(b);
-        b->initHPBar(); // Initialize HP Bar
+        b->initHPBar(); 
     };
     
     // Level 1
@@ -211,7 +209,6 @@ void BattleScene::setupLevel(int level) {
     
     // Medium (Level >= 2)
     if (level >= 2) {
-        // Outskirts 4 directions (Diagonals at 12 tiles)
         int dist = 12 * tileSize;
         addMine(center + Vec2(dist, dist));
         addMine(center + Vec2(-dist, dist));
@@ -221,7 +218,6 @@ void BattleScene::setupLevel(int level) {
     
     // Hard (Level >= 3)
     if (level >= 3) {
-        // Outskirts 8 directions (Add Cardinals at 12 tiles)
         int dist = 12 * tileSize;
         addMine(center + Vec2(0, dist));
         addMine(center + Vec2(0, -dist));
@@ -258,14 +254,14 @@ void BattleScene::setupLevel(int level) {
             Vec2 tr(maxX + margin, maxY + margin);
             
             auto drawNode = DrawNode::create();
-            // Draw red rectangle frame
+            
             Vec2 points[4] = {
                 Vec2(bl.x, bl.y),
                 Vec2(tr.x, bl.y),
                 Vec2(tr.x, tr.y),
                 Vec2(bl.x, tr.y)
             };
-            drawNode->drawPolygon(points, 4, Color4F(0, 0, 0, 0), 0.7f, Color4F::RED); // Transparent fill, Red border, thickness 0.7
+            drawNode->drawPolygon(points, 4, Color4F(0, 0, 0, 0), 0.7f, Color4F::RED); 
             _mapNode->addChild(drawNode, 1000); // High Z-order to be visible
         }
     }
@@ -410,8 +406,8 @@ void BattleScene::setupUI() {
     menu->setPosition(Vec2::ZERO);
     _troopSelectionNode->addChild(menu);
 
-    // Debug Label
-    _debugLabel = Label::createWithSystemFont("Debug: Ready", "Arial", 24);
+    // Label
+    _debugLabel = Label::createWithSystemFont("Ready", "Arial", 24);
     _debugLabel->setPosition(Vec2(visibleSize.width/2, visibleSize.height - 50));
     _debugLabel->setColor(Color3B::YELLOW);
     this->addChild(_debugLabel, 100);
@@ -435,8 +431,8 @@ void BattleScene::updateTotalTroopsUI() {
 bool BattleScene::onTouchBegan(Touch* touch, Event* event) {
     if (_isReplay) return true; // Consume touch but do nothing
     Vec2 loc = touch->getLocation();
-    if (loc.y < 100) return false; // Clicked on UI
-    return true; // Claim touch for drag/tap
+    if (loc.y < 100) return false;
+    return true; 
 }
 
 void BattleScene::onTouchMoved(Touch* touch, Event* event) {
@@ -554,21 +550,6 @@ void BattleScene::update(float dt) {
         
         // End replay check
         if (_replayEventIndex >= _replayRecord.events.size()) {
-            // All events played, wait a bit then show result
-            // Check if all troops dead or won?
-            // Or just check if simulation settled.
-            // For now, let's trust the simulation to reach the same end state,
-            // but we need to trigger "End Replay" eventually.
-            // Let's just check win condition manually OR wait for no troops?
-            // Actually, we should just let the simulation run.
-            // But we need to know when to stop.
-            // Let's use the win/loss state from record? Or recalculate?
-            // If we recalculate, we can see if it diverges.
-            // But the user said "Directly shows victory". 
-            // That was because checkWinCondition() was running immediately on init because no troops were spawned yet!
-            
-            // Now that checkWinCondition() is skipped for replay, we need a way to end it.
-            // Let's check win condition ONLY if some time has passed or events finished.
             
             bool anyTroopAlive = false;
             for (auto s : _friendlyTroops) {
@@ -578,13 +559,8 @@ void BattleScene::update(float dt) {
                 }
             }
             
-            // If all events done AND (no troops left OR win), then show result.
-            // Or simply, if we want to mimic the exact end time, we should record end time.
-            // Without end time, we wait until no action.
             
-            // Simple approach: Allow standard checkWinCondition to run AFTER all events are spawned.
             if (_replayEventIndex >= _replayRecord.events.size()) {
-                 // Re-enable win check logic locally
                  bool enemyTHAlive = false;
                  for (auto b : _enemyBuildings) {
                      if (dynamic_cast<building::TownHall*>(b) && b->getCurrentHP() > 0) {
@@ -621,12 +597,7 @@ void BattleScene::update(float dt) {
             
             // Adjust range for target size (Edge-to-Edge)
             Rect targetBox = target->getBoundingBox();
-            // Use slightly smaller radius to ensure we are well within range, or full radius?
-            // Usually Range is "distance to target". If target is big, center is far.
-            // Let's add the "radius" of the target to the soldier's range.
             float targetRadius = std::max(targetBox.size.width, targetBox.size.height) / 2.0f;
-            // Reduce slightly (e.g. -5) to require getting a bit closer than just touching the bounding box, 
-            // or just use full radius. Full radius is safer to avoid "stuck but cant attack".
             float effectiveRange = s->getAttackRange() + targetRadius;
             
             // Attack or Move
@@ -660,7 +631,7 @@ void BattleScene::update(float dt) {
                              CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("boom.mp3");
                              // AOE Logic
                              Vec2 hitPos = target->getPosition();
-                             // Deal damage to target and nearby
+
                              for (auto b : _enemyBuildings) {
                                  if (b->getPosition().distance(hitPos) <= 64) { // 2x2 grid approx radius
                                      b->takeDamage(s->getAttackDamage());
@@ -669,12 +640,11 @@ void BattleScene::update(float dt) {
                          }, "bomb.png");
                     }
                     
-                    // Mark as attacked
+                   
                 }
             } else {
                 // Move using Pathfinding
                 if (!s->hasPath()) {
-                     // Try to calculate path again if lost or finished but not in range
                      s->setPath(findPath(s->getPosition(), target->getPosition()));
                 }
                 s->moveAlongPath(dt);
@@ -690,8 +660,6 @@ void BattleScene::update(float dt) {
             continue; 
         }
         
-        // Is it a defense tower?
-        // Check if it has attack damage > 0 (set in init)
         if (b->getAttackDamage() > 0) {
             // Cooldown
             b->setAttackTimer(b->getAttackTimer() + dt);
@@ -717,14 +685,11 @@ void BattleScene::update(float dt) {
                     
                     // Visuals
                     if (dynamic_cast<building::Cannon*>(b)) {
-                        // Rotate Cannon to face target (Assuming texture faces LEFT)
                         Vec2 diff = targetTroop->getPosition() - b->getPosition();
                         float angleRad = atan2(diff.y, diff.x);
                         float angleDeg = CC_RADIANS_TO_DEGREES(angleRad);
                         b->setRotation(180 - angleDeg);
 
-                        // Cannon: Fire bullet or just recoil
-                        // Let's fire a projectile for visibility
                         fireProjectile(b->getPosition(), targetTroop->getPosition(), [targetTroop, b](){
                             if (!targetTroop->isDead()) targetTroop->takeDamage(b->getAttackDamage());
                         });
@@ -744,8 +709,6 @@ void BattleScene::update(float dt) {
         }
     }
     
-    // Clean up dead
-    // ...
     
     checkWinCondition();
 }
@@ -807,7 +770,7 @@ void BattleScene::fireProjectile(Vec2 start, Vec2 end, std::function<void()> onH
 }
 
 void BattleScene::checkWinCondition() {
-    if (_isReplay) return; // Replay controls its own ending or follows events, don't auto-check logic
+    if (_isReplay) return;
 
     bool enemyTHAlive = false;
     bool anyEnemyAlive = false;
@@ -931,22 +894,7 @@ std::vector<Vec2> BattleScene::findPath(Vec2 start, Vec2 end) {
     // If start == end, return empty
     if (startGrid == endGrid) return {};
     
-    // If end is blocked, find nearest walkable neighbor? 
-    // Or just path to it as close as possible?
-    // For now, if end is blocked (it IS blocked because it's a building), we target a neighbor.
-    // The target is the building, so endGrid is inside the building.
-    // We need to find a path to a tile ADJACENT to the building.
-    
     if (!isWalkable(endGrid.x, endGrid.y)) {
-        // Find nearest walkable neighbor to start
-        // Simple BFS or just check neighbors
-        // Actually, A* to the "nearest walkable tile to end" is better.
-        // Let's modify A* goal condition: if we reach a tile adjacent to endGrid (if endGrid is the target building).
-        // But generic A* goes to exact tile.
-        
-        // Strategy: Find all walkable tiles adjacent to the target building.
-        // Pick the one closest to start.
-        // Set that as new endGrid.
         
         float minD = 99999;
         Vec2 bestEnd = endGrid;
@@ -958,11 +906,7 @@ std::vector<Vec2> BattleScene::findPath(Vec2 start, Vec2 end) {
                 int nx = endGrid.x + dx;
                 int ny = endGrid.y + dy;
                 if (isWalkable(nx, ny)) {
-                    // Check if this tile is adjacent to the blocked region of the target?
-                    // Or simply: closest walkable tile to the original endGrid.
                     float d = startGrid.distance(Vec2(nx, ny)) + Vec2(nx, ny).distance(endGrid)*0.1f; // Heuristic
-                    // Actually we want closest to TARGET, but reachable from START.
-                    // Just closest to target center is good.
                     float d2 = Vec2(nx, ny).distance(endGrid);
                     
                     if (d2 < minD) {
@@ -1039,10 +983,6 @@ std::vector<Vec2> BattleScene::findPath(Vec2 start, Vec2 end) {
             
             bool inOpen = openSet.count({nx, ny});
             
-            // Simplification: Not checking if new path to existing open node is better (usually not needed for simple grid)
-            // But strict A* requires it. 
-            // For now, simple implementation: if in open, skip (suboptimal but faster), or update.
-            // Let's just add if not in open.
             
             if (!inOpen) {
                 NodeWrapper* neighbor = new NodeWrapper(nx, ny);
@@ -1086,9 +1026,7 @@ void BattleScene::updateLandmines(float dt) {
         }
         
         bool triggered = false;
-        // Trigger Range 2x2: approx distance check
-        // Center to Center distance. If tile is 32, 2x2 is 64x64.
-        // Radius approx 40-50 pixels.
+
         for (auto s : _friendlyTroops) {
             if (s->isDead()) continue;
             if (s->getPosition().distance(mine->getPosition()) < 50.0f) {
