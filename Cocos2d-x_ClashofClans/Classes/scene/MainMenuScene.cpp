@@ -54,7 +54,7 @@ static MenuItemSprite* createTrimmedButton(const std::string& normalImage, const
     return MenuItemImage::create(normalImage, selectedImage, callback);
 }
 
-// Print useful error message instead of segfaulting when files are not there.
+
 static void problemLoading(const char* filename) {
     printf("Error while loading: %s\n", filename);
     printf("Depending on how you compiled you might have to add 'Resources/' in front of filenames in MainMenuScene.cpp\n");
@@ -82,8 +82,7 @@ bool MainMenuScene::init() {
         // Position the background in the center
         _background->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
         
-        // Scale background to fit screen if necessary (optional, depending on image size)
-        // For now, assuming 960x640 image or similar
+
         float scaleX = visibleSize.width / _background->getContentSize().width;
         float scaleY = visibleSize.height / _background->getContentSize().height;
         _background->setScale(MAX(scaleX, scaleY));
@@ -156,9 +155,6 @@ void MainMenuScene::onExitGameCallback(Ref* pSender) {
     // Close the cocos2d-x game scene and quit the application
     Director::getInstance()->end();
 
-    /*To navigate back to native iOS screen(if present) without quitting the application  ,do not use Director::end() and exit(0) as given above,instead trigger a custom event created in RootViewController.mm as below*/
-    //EventCustom customEndEvent("game_scene_close_event");
-    //_eventDispatcher->dispatchEvent(&customEndEvent);
 }
 
 } // namespace scene

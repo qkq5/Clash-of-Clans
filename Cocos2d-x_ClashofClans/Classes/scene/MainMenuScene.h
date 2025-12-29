@@ -11,7 +11,6 @@ public:
 
     virtual bool init() override;
     
-    // Implement the "static create()" method manually
     CREATE_FUNC(MainMenuScene);
 
 private:

@@ -65,7 +65,7 @@ bool Cannon::canUpgrade() const {
 }
 
 void Cannon::showInfo() {
-    // Handled by VillageScene
+
 }
 
 } // namespace building

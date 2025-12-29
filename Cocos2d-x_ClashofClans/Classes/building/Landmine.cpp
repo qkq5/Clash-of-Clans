@@ -28,11 +28,7 @@ bool Landmine::init() {
     _attackDamage = 500;
     _attackRange = 3.0f * 32.0f; // 3 tiles
     
-    // Try to set texture, fallback if needed
     if (!this->initWithFile("landmine.png")) {
-        // Fallback: create a small red square if image missing, or just rely on sprite init
-        // But since we inherit Sprite, initWithFile resets it.
-        // If Building::init() called Sprite::init(), we are already a sprite.
         this->setTexture("landmine.png");
     }
 

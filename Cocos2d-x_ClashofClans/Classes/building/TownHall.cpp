@@ -49,7 +49,7 @@ void TownHall::upgrade() {
     } else if (_level == 3) {
         _maxHP = 2000;
     }
-    _currentHP = _maxHP; // Heal on upgrade? usually yes in simple games
+    _currentHP = _maxHP; 
     
     updateTexture();
 }
@@ -65,7 +65,6 @@ bool TownHall::canUpgrade() const {
 }
 
 void TownHall::showInfo() {
-    // This will be used by the UI system to populate the info panel
     CCLOG("Town Hall Level %d selected", _level);
 }
 

@@ -61,8 +61,6 @@ bool GoldMine::canUpgrade() const {
 }
 
 void GoldMine::showInfo() {
-    // This will be handled by the Scene calling this object's getters
-    // Or we can emit an event. For now, we rely on Scene to query.
     CCLOG("Show Info for Gold Mine Level %d", _level);
 }
 

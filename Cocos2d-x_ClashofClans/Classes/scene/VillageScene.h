@@ -24,7 +24,7 @@ public:
     virtual void onEnter() override;
     virtual void update(float dt) override; // Added update loop
     
-    // Implement the "static create()" method manually
+
     CREATE_FUNC(VillageScene);
 
 private:
@@ -69,22 +69,17 @@ private:
     std::vector<building::Building*> _buildings;
     
     cocos2d::Layer* _uiLayer;
-    cocos2d::Node* _currentWindow; // Currently open window (Level Select, Build, Info)
+    cocos2d::Node* _currentWindow; 
     
     cocos2d::Label* _goldLabel;
     cocos2d::Label* _elixirLabel;
     cocos2d::Label* _populationLabel;
 
-    double _gold; // Changed to double for smoother accumulation, display as int
+    double _gold; 
     double _elixir;
-    int _population; // Builders? Or separate concept? Requirement says "population", image "people.png". Assuming builders/citizens for now.
-    // Wait, D1 says Barracks provide "Troop Capacity". 
-    // "Population" in top right usually refers to Builders in similar games, or maybe available troops? 
-    // Requirement: "右上角：展示金币 / 圣水 / 人口数量... 人口的图片为“people.png”"
-    // Requirement D1: "Barracks... provide troop capacity limit... consume troop count"
-    // Usually Population = Troops. Let's track troops here.
+    int _population; 
     
-    // Troops storage (Simple count for now, or map of types)
+
     std::map<std::string, int> _troops;
 
     // Touch handling

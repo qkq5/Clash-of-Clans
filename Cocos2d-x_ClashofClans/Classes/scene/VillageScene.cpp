@@ -91,7 +91,6 @@ namespace scene {
             if (_elixir > maxElixir) _elixir = maxElixir;
         }
 
-        // Update UI (maybe throttle this if performance issue, but text update is cheap)
         updateResourceLabels();
     }
 
@@ -115,17 +114,6 @@ namespace scene {
                 }
             }
         }
-        // Base capacity if 0 storages? Usually there is a small base capacity in TownHall (e.g. 1000)
-        // Requirement says "Gold Storage determines max limit".
-        // "Game starts with 1 Gold Storage Lv1 (Cap 600)".
-        // Plus we have initial 1000 gold. This exceeds cap.
-        // Let's assume Town Hall also has capacity or initial resources can exceed cap.
-        // Requirement: "Gold stops increasing when it reaches cap". Doesn't say it clamps immediately if over.
-        // But usually Town Hall has capacity (e.g. 1000).
-        // Let's add Town Hall capacity (usually 1000 for Lv1).
-        // For this assignment, let's stick to Storage buildings capacity as requested.
-        // "Gold Storage... determines max limit".
-        // If I have 1000 gold and cap is 600, I just can't collect more.
         return capacity > 0 ? capacity : 1000; // Fallback to 1000 to prevent stuck at 0 if no storage
     }
 
@@ -828,8 +816,6 @@ namespace scene {
             menuItems.pushBack(upgradeItem);
         }
         else {
-            // Max Level Label instead of button? Or just show nothing/disabled button.
-            // For layout simplicity, maybe just text on screen.
         }
 
         // Train Button (Training Camp only)
@@ -989,10 +975,6 @@ namespace scene {
         if (!building) return;
 
         int cost = building->getUpgradeCost();
-        // Check currency type
-        // Simple logic: TownHall uses Gold? Yes.
-        // GoldMine uses Elixir.
-        // ElixirCollector uses Gold.
 
         bool enough = false;
         std::string currency = building->getUpgradeCurrencyIcon();

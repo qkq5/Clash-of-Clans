@@ -18,7 +18,6 @@ public:
     
     int getProductionRate() const;
 
-    // Static info for Build Menu
     static int getBuildCost() { return 150; }
     static std::string getBuildCurrencyIcon() { return "elixir.png"; }
 

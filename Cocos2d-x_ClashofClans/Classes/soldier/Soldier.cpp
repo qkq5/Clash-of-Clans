@@ -66,9 +66,7 @@ bool Soldier::init(SoldierType type) {
             _attackDamage = 180; // Explosion damage
             _moveSpeed = 40.0f; // Slow
             _attackRange = 3.0f * 32.0f; // 3 tiles
-            _attackInterval = 2.0f; // Not specified, assume slow? "远程丢炸弹" - let's say 2s or 1s. Prompt says nothing on interval. Default 1s.
-            // Prompt: "炸弹人... 攻击间隔" missing. Archer has 2/s. Giant 1/s. Barb 1/s.
-            // Let's assume 1s.
+
             _attackInterval = 1.0f; 
             _space = 2;
             break;
@@ -124,8 +122,6 @@ void Soldier::setPath(const std::vector<cocos2d::Vec2>& path) {
 }
 
 void Soldier::update(float dt) {
-    // Logic currently handled in BattleScene, but we can put movement here if we want.
-    // For now, we'll use a specific method called by BattleScene.
 }
 
 void Soldier::moveAlongPath(float dt) {
