@@ -16,7 +16,6 @@ enum class BuildingType {
     Cannon,
     Barracks,
     TrainingCamp,
-    Wall,
     Landmine
 };
 

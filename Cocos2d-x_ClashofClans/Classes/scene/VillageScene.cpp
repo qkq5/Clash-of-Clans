@@ -11,7 +11,6 @@
 #include "building/Cannon.h"
 #include "building/Barracks.h"
 #include "building/TrainingCamp.h"
-#include "building/Wall.h"
 #include "building/Landmine.h"
 #include <vector>
 
@@ -352,7 +351,6 @@ namespace scene {
         case building::BuildingType::Cannon: building = building::Cannon::create(); break;
         case building::BuildingType::Barracks: building = building::Barracks::create(); break;
         case building::BuildingType::TrainingCamp: building = building::TrainingCamp::create(); break;
-        case building::BuildingType::Wall: building = building::Wall::create(); break;
         default: break;
         }
 
@@ -676,7 +674,6 @@ namespace scene {
         case building::BuildingType::ElixirStorage: return (thLevel >= 3) ? 2 : 1;
         case building::BuildingType::Cannon: return (thLevel >= 3) ? 3 : (thLevel >= 2 ? 2 : 1);
         case building::BuildingType::ArcherTower: return (thLevel >= 3) ? 2 : 1;
-        case building::BuildingType::Wall: return (thLevel >= 3) ? 40 : (thLevel >= 2 ? 10 : 0);
         case building::BuildingType::Landmine: return (thLevel >= 3) ? 12 : (thLevel >= 2 ? 8 : 4);
         default: return 0;
         }
